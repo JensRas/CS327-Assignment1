@@ -36,7 +36,7 @@ Final.
 
 ## Running the tests
 
-Simply compile the program using gcc -Wall assignment0.c -o assingment and run using ./assignment1.
+Simply compile the program using gcc -Wall assignment1.c -o assignment1 and run using ./assignment1.
 or
 Use the make file.
 
