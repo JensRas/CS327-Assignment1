@@ -4,9 +4,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+#include <time.h>
 
 #define minRoomNumber 6
 #define maxRoomNumber 10
+#define maxRoomSize 10
 #define minRoomX 4
 #define minRoomY 3
 #define floorMaxX 80
@@ -29,25 +32,27 @@ struct tiles {
 };
 
 struct rooms {
-    int cornerX;
-    int cornerY;
+    int cornerX; // Top left
+    int cornerY; // Top left
     int sizeX;
     int sizeY; 
 };
 
-void roomGen(struct tiles(*floor)[80][21]);
-void printGame(struct tiles(*floor)[80][21]);
+void roomGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomList)[maxRoomNumber], int roomsWanted);
+void printGame(struct tiles(*floor)[floorMaxX][floorMaxY]);
 
 int main(int argc, char *argv[])
 {
-    //srand(); // Testing
+    printf("Error5");
+    srand(time(0)); // Testing
     int i, j;
-    int roomCount = 0;
-    int roomsWanted = rand()%4 + minRoomNumber;
+    int roomsWanted = (rand() % ((maxRoomNumber + 1) - minRoomNumber)) + minRoomNumber; // Always min , potential of adding rooms up to max
 
-    struct tiles floor[80][21];
+    struct tiles floor[floorMaxX][floorMaxY];
     struct rooms roomList[maxRoomNumber];
     
+    printf("Error4");
+
     // Top / Bottom
     for(i = 0; i < floorMaxX; i++){
         floor[i][0].type = edgeChar;
@@ -64,6 +69,7 @@ int main(int argc, char *argv[])
         floor[floorMaxX - 1][j].hardness = 0;
     }
 
+    roomGen(&floor, &roomList, roomsWanted);
     printGame(&floor);
     
     /* while(roomCount < roomsWanted){
@@ -73,23 +79,48 @@ int main(int argc, char *argv[])
 return 0;
 }
 
-void roomGen(struct tiles(*floor)[80][21])
+void roomGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomList)[maxRoomNumber], int roomsWanted)
 {
-    //srand(); // Testing
-    int dimX, dimY, placeX, placeY;
-    dimX = rand()%80;
-    dimY = rand()%21;
-    placeX = rand()%80 - dimX;
-    placeY = rand()%21 - dimY;
-    
+    srand(time(0)); // Testing
+    int i, k, l, failCount;
+    bool placed = false;
+
+    while(!placed){
+        for(i = 0; i < roomsWanted; i++){
+            roomList[i]->sizeX = rand() % (maxRoomSize - 1) + 1;
+            roomList[i]->sizeY = rand() % (maxRoomSize - 1) + 1;
+            roomList[i]->cornerX = rand() % (floorMaxX - 1) + 1;
+            roomList[i]->cornerY = rand() % (floorMaxY - 1) + 1;
+
+            printf("Error1");
+
+            if(floor[roomList[i]->cornerX][roomList[i]->cornerY]->type == rockChar && // Top left
+               floor[roomList[i]->cornerX + roomList[i]->sizeX][roomList[i]->cornerY]->type == rockChar && // Top right
+               floor[roomList[i]->cornerX + roomList[i]->sizeX][roomList[i]->cornerY + roomList[i]->sizeY]->type == rockChar && // Bottom right
+               floor[roomList[i]->cornerX][roomList[i]->cornerY + roomList[i]->sizeY]->type == rockChar){ // Bottom left
+                printf("Error2");
+                for (k = 0; k < roomList[i]->sizeX; k++) {
+                    for (l = 0; l < roomList[i]->sizeY; l++){
+                        floor[roomList[i]->cornerX + k][roomList[i]->cornerY + l]->type = roomChar;
+                        printf("Error3");
+                    }
+                }
+            }
+            else{
+                failCount++;
+                break;
+            }
+        }
+        placed = true;
+    }
 }
 
-void printGame(struct tiles(*floor)[80][21])
+void printGame(struct tiles(*floor)[floorMaxX][floorMaxY])
 {
     int i, j;
     
     for(i = 0; i < floorMaxY; i++){
-        for(int j = 0; j < floorMaxX; j++){
+        for(j = 0; j < floorMaxX; j++){
             switch((*floor)[j][i].type) {
                 case edgeChar :
                     printf("%c", edgeChar);
