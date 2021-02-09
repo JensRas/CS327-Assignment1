@@ -1,5 +1,6 @@
 * Thomas McCoy - NET_ID: tmccoy1@iastate.edu
 * Jens Rasmussen - NET_ID: jensr@iastate.edu
+* Jason Guo - NET_ID: jtguo@iastate.edu
 
 # Assignment 1 
 
@@ -44,6 +45,7 @@ Use the make file.
 
 * **Thomas McCoy** - *Code development* - [MythicAlchemist](https://github.com/MythicAlchemist) - NET_ID: tmccoy1@iastate.edu
 * **Jens Rasmussen** - *Code development* - [JensRas](https://github.com/JensRas) - NET_ID: jensr@iastate.edu
+* **Jason Guo** - *Code development* - [JasonGuo-ISU](https://github.com/JasonGuo-ISU) - NET_ID: jtguo@iastate.edu
 
 ## Acknowledgments
 
