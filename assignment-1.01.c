@@ -16,8 +16,8 @@
 #define floorMaxY 21
 #define edgeChar 'H'
 #define roomChar '.'
-#define corridorChar '#'
-#define rockChar ' '
+#define corridorChar '='
+#define rockChar '#'
 #define upChar '<'
 #define downChar '>'
 
@@ -39,86 +39,174 @@ struct rooms {
 };
 
 void roomGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomList)[maxRoomNumber], int roomsWanted);
+void corridorGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomList)[maxRoomNumber], int roomsWanted);
 void printGame(struct tiles(*floor)[floorMaxX][floorMaxY]);
+void placeBorder(struct tiles(*floor)[floorMaxX][floorMaxY]);
+
+
 
 int main(int argc, char *argv[])
 {
-    printf("Error5");
-    srand(time(0)); // Testing
-    int i, j;
+    //srand(time(0)); // Random
     int roomsWanted = (rand() % ((maxRoomNumber + 1) - minRoomNumber)) + minRoomNumber; // Always min , potential of adding rooms up to max
+    //printf("%d\n", roomsWanted);
 
     struct tiles floor[floorMaxX][floorMaxY];
-    struct rooms roomList[maxRoomNumber];
-    
-    printf("Error4");
+    struct rooms roomList[roomsWanted];
 
-    // Top / Bottom
-    for(i = 0; i < floorMaxX; i++){
-        floor[i][0].type = edgeChar;
-        floor[i][0].hardness = 0;
-        floor[i][floorMaxY - 1].type = edgeChar;
-        floor[i][floorMaxY- 1].hardness = 0;
-    }
-    
-    // Sides 
-    for(j = 0; j < floorMaxY; j++){
-        floor[0][j].type = edgeChar;
-        floor[0][j].hardness = 0;
-        floor[floorMaxX - 1][j].type = edgeChar;
-        floor[floorMaxX - 1][j].hardness = 0;
-    }
-
+    placeBorder(&floor);
     roomGen(&floor, &roomList, roomsWanted);
+    printf("%d\n", roomsWanted);
+    corridorGen(&floor, &roomList, roomsWanted);
+    // Bugs with rooms only on the left third of the floor having pieces taken out around specific areas of the floor
+    // Bugs with border having pieces of the left third of the floor
+    //placeBorder(&floor); // Covers up border problems
     printGame(&floor);
-    
-    /* while(roomCount < roomsWanted){
-        roomGen(&floor);
-        roomCount++;
-    } */
-return 0;
+    return 0;
 }
+
+
+
+
 
 void roomGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomList)[maxRoomNumber], int roomsWanted)
 {
-    srand(time(0)); // Testing
-    int i, k, l, failCount;
-    bool placed = false;
+    //srand(time(0)); // Random
+    int i, j, k, failCount = 0;
+    bool placedAll = false;
 
-    while(!placed){
+    while(!placedAll){
+        placedAll = true;
+        for(i = 1; i < floorMaxX - 1; i++) { // Set everything to rock
+            for (j = 1; j < floorMaxY - 1; j++) {
+                (*floor)[i][j].type = rockChar;
+            }
+        }
+
         for(i = 0; i < roomsWanted; i++){
-            roomList[i]->sizeX = rand() % (maxRoomSize - 1) + 1;
-            roomList[i]->sizeY = rand() % (maxRoomSize - 1) + 1;
-            roomList[i]->cornerX = rand() % (floorMaxX - 1) + 1;
-            roomList[i]->cornerY = rand() % (floorMaxY - 1) + 1;
-
-            printf("Error1");
-
-            if(floor[roomList[i]->cornerX][roomList[i]->cornerY]->type == rockChar && // Top left
-               floor[roomList[i]->cornerX + roomList[i]->sizeX][roomList[i]->cornerY]->type == rockChar && // Top right
-               floor[roomList[i]->cornerX + roomList[i]->sizeX][roomList[i]->cornerY + roomList[i]->sizeY]->type == rockChar && // Bottom right
-               floor[roomList[i]->cornerX][roomList[i]->cornerY + roomList[i]->sizeY]->type == rockChar){ // Bottom left
-                printf("Error2");
-                for (k = 0; k < roomList[i]->sizeX; k++) {
-                    for (l = 0; l < roomList[i]->sizeY; l++){
-                        floor[roomList[i]->cornerX + k][roomList[i]->cornerY + l]->type = roomChar;
-                        printf("Error3");
+            roomList[i]->sizeX = rand() % (maxRoomSize - minRoomX) + minRoomX;
+            roomList[i]->sizeY = rand() % (maxRoomSize - minRoomY) + minRoomY;
+            roomList[i]->cornerX = rand() % (floorMaxX - roomList[i]->sizeX - 2);
+            roomList[i]->cornerY = rand() % (floorMaxY - roomList[i]->sizeY - 2);
+            
+            for (j = -1; j < roomList[i]->sizeX + 1; j++) {
+                for (k = -1; k < roomList[i]->sizeY + 1; k++) {
+                    if((*floor)[roomList[i]->cornerX + j][roomList[i]->cornerY + k].type == roomChar || 
+                        (*floor)[roomList[i]->cornerX + j][roomList[i]->cornerY + k].type == edgeChar){
+                        failCount++;
+                        placedAll = false;
+                    }
+                }
+            } 
+            if(placedAll){
+                for (j = 0; j < roomList[i]->sizeX; j++) {
+                    for (k = 0; k < roomList[i]->sizeY; k++) {
+                        (*floor)[roomList[i]->cornerX + j][roomList[i]->cornerY + k].type = roomChar;
                     }
                 }
             }
+        }
+    }
+    printf("%d\n", failCount);
+}
+
+
+
+void corridorGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomList)[maxRoomNumber], int roomsWanted) 
+{
+    int i, j, k, ranX, ranY, ranX2, ranY2;
+
+    for (i = 0; i < roomsWanted; i++) {
+        if(i < roomsWanted - 1) {
+            ranX = roomList[i]->cornerX + (rand() % roomList[i]->sizeX);
+            ranY = roomList[i]->cornerY + (rand() % roomList[i]->sizeY);
+            ranX2 = roomList[i + 1]->cornerX + (rand() % roomList[i + 1]->sizeX);
+            ranY2 = roomList[i + 1]->cornerY + (rand() % roomList[i + 1]->sizeY);
+        }else { 
+            ranX = roomList[i]->cornerX + (rand() % roomList[i]->sizeX);
+            ranY = roomList[i]->cornerY + (rand() % roomList[i]->sizeY);
+            ranX2 = roomList[0]->cornerX + (rand() % roomList[0]->sizeX);
+            ranY2 = roomList[0]->cornerY + (rand() % roomList[0]->sizeY);
+        }
+
+        int l = 0;
+        printf("%d  (%d, %d)   (%d, %d)\n", i, ranX, ranY, ranX2, ranY2);
+
+
+
+        for(j = 0; j < abs(ranX - ranX2); j++){
+            if(ranX - ranX2 > 0){
+                if((*floor)[ranX + j][ranY].type != roomChar){
+                    (*floor)[ranX + j][ranY].type = corridorChar;
+                    l++;
+                }
+            }
             else{
-                failCount++;
-                break;
+                if((*floor)[ranX - j][ranY].type != roomChar){
+                    (*floor)[ranX - j][ranY].type = corridorChar;
+                    l--;
+                }
             }
         }
-        placed = true;
+        /* for(k = 0; k < abs(ranY - ranY2); k++){
+            if(ranY - ranY2 > 0){
+                if((*floor)[ranX + l][ranY + k].type != roomChar){
+                    (*floor)[ranX + l][ranY + k].type = corridorChar;
+                }
+            }
+            else {
+                if((*floor)[ranX + l][ranY - k].type != roomChar){
+                    (*floor)[ranX + l][ranY - k].type = corridorChar;
+                }
+            }
+        }   */
+
+
+        /////////////////////////
+        //Debug Version
+        /////////////////////////
+        /* for(j = 0; j < abs(ranX - ranX2); j++){
+            if(ranX - ranX2 > 0){
+                    (*floor)[ranX + j][ranY].type = corridorChar;
+                    l++;
+            }
+            else{
+                    (*floor)[ranX - j][ranY].type = corridorChar;
+                    l--;
+            }
+        }
+        
+        for(k = 0; k < abs(ranY - ranY2); k++){
+            if(ranY - ranY2 > 0){
+                    (*floor)[ranX + l][ranY + k].type = corridorChar;
+            }
+            else {
+                    (*floor)[ranX + l][ranY - k].type = corridorChar;
+            }
+        }  */
+    }
+}
+
+void placeBorder(struct tiles(*floor)[floorMaxX][floorMaxY])
+{
+    int i, j;
+    for(i = 0; i < floorMaxX; i++){ // Top
+        (*floor)[i][0].type = edgeChar;
+        (*floor)[i][0].hardness = 0;
+        (*floor)[i][floorMaxY - 1].type = edgeChar;
+        (*floor)[i][floorMaxY- 1].hardness = 0;
+    }
+    for(j = 0; j < floorMaxY; j++){ // Sides
+        (*floor)[0][j].type = edgeChar;
+        (*floor)[0][j].hardness = 0;
+        (*floor)[floorMaxX - 1][j].type = edgeChar;
+        (*floor)[floorMaxX - 1][j].hardness = 0;
     }
 }
 
 void printGame(struct tiles(*floor)[floorMaxX][floorMaxY])
 {
     int i, j;
-    
     for(i = 0; i < floorMaxY; i++){
         for(j = 0; j < floorMaxX; j++){
             switch((*floor)[j][i].type) {
@@ -137,8 +225,11 @@ void printGame(struct tiles(*floor)[floorMaxX][floorMaxY])
                 case downChar :
                     printf("%c", downChar);
                     break;
+                case rockChar :
+                    printf("%c", rockChar);
+                    break;
                 default :
-                    printf("%c", rockChar); // Maybe change to Error char 'E'
+                    printf("E"); // Error
             }
         }
         printf("\n");
