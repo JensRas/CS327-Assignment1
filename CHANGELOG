@@ -2,3 +2,5 @@
 2/8/21 9:30 PM JCR TOM: Implemented print function
 2/9/21 1:00 PM JCR JTG TOM: Started implementing the roomGen
 2/9/21 6:00 PM JCR JTG TOM: Finished roomGen (with a weird bug), started corridorGen
+2/10/21 7:00 PM JCR TOM: Implemented staircaseroomGen, Fixed Makefile
+2/10/21 7:45 PM JCR JTG TOM: Bug tested and attempted to fix weird errors for three hours
