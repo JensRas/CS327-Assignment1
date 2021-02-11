@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <time.h>
+#include <math.h>
 
 #define minRoomNumber 6
 #define maxRoomNumber 10
@@ -14,12 +15,13 @@
 #define minRoomY 3
 #define floorMaxX 80
 #define floorMaxY 21
-#define edgeChar 'H'
-#define roomChar '.'
-#define corridorChar '='
-#define rockChar '#'
+#define edgeChar '#'
+#define roomChar ' '
+#define corridorChar 'o'
+#define rockChar '.'
 #define upChar '<'
 #define downChar '>'
+
 
 // At least one cell of non-room 1 cell of non-room between any two different rooms
 
@@ -39,35 +41,30 @@ struct rooms {
 };
 
 void roomGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomList)[maxRoomNumber], int roomsWanted);
+void staircaseGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomList)[maxRoomNumber], int roomsWanted);
 void corridorGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomList)[maxRoomNumber], int roomsWanted);
 void printGame(struct tiles(*floor)[floorMaxX][floorMaxY]);
 void placeBorder(struct tiles(*floor)[floorMaxX][floorMaxY]);
 
-
-
 int main(int argc, char *argv[])
 {
-    //srand(time(0)); // Random
-    int roomsWanted = (rand() % ((maxRoomNumber + 1) - minRoomNumber)) + minRoomNumber; // Always min , potential of adding rooms up to max
-    //printf("%d\n", roomsWanted);
+    srand(time(0)); // Random
+    int roomsWanted = (rand() % ((maxRoomNumber + 1) - minRoomNumber)) + minRoomNumber; // Always min , potential of adding rooms up to max  
 
     struct tiles floor[floorMaxX][floorMaxY];
     struct rooms roomList[roomsWanted];
 
     placeBorder(&floor);
     roomGen(&floor, &roomList, roomsWanted);
-    printf("%d\n", roomsWanted);
     corridorGen(&floor, &roomList, roomsWanted);
+    staircaseGen(&floor, &roomList, roomsWanted);
+    
     // Bugs with rooms only on the left third of the floor having pieces taken out around specific areas of the floor
     // Bugs with border having pieces of the left third of the floor
     //placeBorder(&floor); // Covers up border problems
     printGame(&floor);
     return 0;
 }
-
-
-
-
 
 void roomGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomList)[maxRoomNumber], int roomsWanted)
 {
@@ -107,15 +104,39 @@ void roomGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomList)
             }
         }
     }
-    printf("%d\n", failCount);
+    //printf("%d\n", failCount);
 }
 
+void staircaseGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomList)[maxRoomNumber], int roomsWanted) {
+    int i, ranX = 0, ranY = 0, ranX2 = 0, ranY2 = 0, ranDown, ranUp;
+    
+    int numStairs = ((rand() % roomsWanted) / 3);
+    if(numStairs < 1 ){
+        numStairs = 1;
+    }
 
+    for(i = 0; i < numStairs; i++){
+        ranX = 0, ranY = 0, ranX2 = 0, ranY2 = 0, ranDown = 0, ranUp = 0;
+        
+        ranDown = rand() % roomsWanted;
+        ranUp = rand() % roomsWanted;
+        
+        while(ranX == ranX2 && ranY == ranY2) {
+            ranX = roomList[ranDown]->cornerX + (rand() % roomList[ranDown]->sizeX);
+            ranY = roomList[ranDown]->cornerY + (rand() % roomList[ranDown]->sizeY);
+            ranX2 = roomList[ranUp]->cornerX + (rand() % roomList[ranUp]->sizeX);
+            ranY2 = roomList[ranUp]->cornerY + (rand() % roomList[ranUp]->sizeY);
+        }
+
+        (*floor)[ranX][ranY].type = downChar;
+        (*floor)[ranX2][ranY2].type = upChar;
+    }
+}
 
 void corridorGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomList)[maxRoomNumber], int roomsWanted) 
 {
     int i, j, k, ranX, ranY, ranX2, ranY2;
-
+    //roomsWanted
     for (i = 0; i < roomsWanted; i++) {
         if(i < roomsWanted - 1) {
             ranX = roomList[i]->cornerX + (rand() % roomList[i]->sizeX);
@@ -130,38 +151,40 @@ void corridorGen(struct tiles(*floor)[floorMaxX][floorMaxY], struct rooms(*roomL
         }
 
         int l = 0;
-        printf("%d  (%d, %d)   (%d, %d)\n", i, ranX, ranY, ranX2, ranY2);
-
-
-
         for(j = 0; j < abs(ranX - ranX2); j++){
-            if(ranX - ranX2 > 0){
+            if(ranX < ranX2){
+                //(*floor)[ranX + j][ranY].type = corridorChar;
+                l++;
                 if((*floor)[ranX + j][ranY].type != roomChar){
                     (*floor)[ranX + j][ranY].type = corridorChar;
-                    l++;
                 }
             }
             else{
+                //(*floor)[ranX - j][ranY].type = corridorChar;
+                l--;
                 if((*floor)[ranX - j][ranY].type != roomChar){
                     (*floor)[ranX - j][ranY].type = corridorChar;
-                    l--;
                 }
             }
         }
-        /* for(k = 0; k < abs(ranY - ranY2); k++){
-            if(ranY - ranY2 > 0){
+
+        for(k = 0; k < abs(ranY - ranY2); k++){
+            if(ranY < ranY2){
+                //(*floor)[ranX + l][ranY + k].type = corridorChar;
                 if((*floor)[ranX + l][ranY + k].type != roomChar){
                     (*floor)[ranX + l][ranY + k].type = corridorChar;
                 }
             }
             else {
+                //(*floor)[ranX + l][ranY - k].type = corridorChar;
                 if((*floor)[ranX + l][ranY - k].type != roomChar){
                     (*floor)[ranX + l][ranY - k].type = corridorChar;
                 }
             }
-        }   */
+        }
 
-
+        /////////////////////////
+        //Debug Version
         /////////////////////////
         //Debug Version
         /////////////////////////
