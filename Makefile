@@ -1,9 +1,9 @@
-all: assignment-1.01
-	make assignment-1.01
+all: rlg327
+	make rlg327
 
-assignment-1.01: assignment-1.01.c
-	gcc -Wall -Werror -ggdb3 assignment-1.01.c -o assignment-1.01
+rlg327: rlg327.c
+	gcc -Wall -Werror -ggdb3 rlg327.c -o rlg327
 
 clean: 
-	rm assignment-1.01 
-	rm assignment-1.01.stackdump
+	rm rlg327 
+	rm rlg327.stackdump
