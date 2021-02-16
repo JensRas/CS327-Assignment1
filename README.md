@@ -6,8 +6,6 @@
 
 COM 327 - Advanced Programming @ Iowa State University - Assignment 1 - Roguelike.
 
-Roguelike game. Generate a dungeon. Write dungeons to disc and read them back. 
-
 ## Getting Started
 
 Border - '#'
@@ -19,9 +17,7 @@ Down Stairs - '>'
 
 ## Running the tests
 
-Simply compile the program using gcc -Wall assignment1.c -o assignment1 and run using ./assignment1.
-or
-Use the Makefile.
+Simply compile the program using gcc -Wall assignment1.c -o assignment1 and run using ./assignment1 or use the Makefile.
 
 ## Authors
 
