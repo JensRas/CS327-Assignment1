@@ -7,7 +7,6 @@
 #include <stdbool.h>
 #include <time.h>
 
-
 #define minRoomNumber 6
 #define maxRoomNumber 10
 #define maxRoomSize 10 // Arbitrary value that can be changed
@@ -22,9 +21,8 @@
 #define upChar '<'
 #define downChar '>'
 
-
 struct tiles {
-    int hardness; // Not used in this assignment
+    int hardness; // Needs to be implemented
     char type;
 };
 
@@ -35,17 +33,17 @@ struct rooms {
     int sizeY; 
 };
 
-
 /*****************************************
  *             Prototypes                *
  *****************************************/
+
 void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int roomsWanted);
 void placeBorder(struct tiles floor[floorMaxY][floorMaxX]);
 void roomGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int roomsWanted);
 void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int roomsWanted);
 void printGame(struct tiles floor[floorMaxY][floorMaxX]);
-
-
+void saveGame(FILE *fptr);
+void loadGame(FILE *fptr);
 
 /*****************************************
  *                Main                   *
@@ -58,14 +56,44 @@ int main(int argc, char *argv[])
     struct tiles floor[floorMaxY][floorMaxX];
     struct rooms roomList[roomsWanted];
 
-    placeBorder(floor);
-    roomGen(floor, roomList, roomsWanted); 
-    corridorGen(floor, roomList, roomsWanted); 
-    staircaseGen(floor, roomList, roomsWanted);
-    printGame(floor);
+    int i;
+    bool gameLoaded = false;
+    FILE *f;
+
+    for(i = 1; i <= sizeof(*argv) / sizeof(argv[0]); i++){
+        if(!strcmp(argv[i], "--load")){
+            if(!(f = fopen("dungeon", "r"))){
+                fprintf(stderr, "Failed to open file for reading");
+                return -1;
+            }
+            loadGame(f);
+            gameLoaded = true;
+            break;
+        }
+    }
+
+    if(!gameLoaded){
+        placeBorder(floor);
+        roomGen(floor, roomList, roomsWanted); 
+        corridorGen(floor, roomList, roomsWanted); 
+        staircaseGen(floor, roomList, roomsWanted);
+    }
+
+    for(i = 1; i <= sizeof(*argv) / sizeof(argv[0]); i++){
+        if(!strcmp(argv[i], "--save")){
+            if(!(f = fopen("dungeon", "w"))){
+                fprintf(stderr, "Failed to open file for writing");
+                return -1;
+            }
+            saveGame(f);
+            break;
+        }
+    }
+
+    //printGame(floor);
+    
     return 0;
 }
-
 
 /*****************************************
  *           Border Generator            *
@@ -87,9 +115,8 @@ void placeBorder(struct tiles floor[floorMaxY][floorMaxX])
     }
 }
 
-
 /*****************************************
- *         Corridor Generation           *
+ *         Corridor Generator            *
  *****************************************/
 void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int roomsWanted) 
 {
@@ -138,9 +165,8 @@ void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList
     }
 }
 
-
 /*****************************************
- *           Room Generation             *
+ *           Room Generator              *
  *****************************************/
 void roomGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int roomsWanted)
 {
@@ -183,9 +209,8 @@ void roomGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[max
     //printf("Failed: %d\n", failCount);
 }
 
-
 /*****************************************
- *         Staircase Generation          *
+ *         Staircase Generator           *
  *****************************************/
 void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int roomsWanted) {
     int i, ranX, ranY, ranX2, ranY2, ranDown, ranUp;
@@ -213,6 +238,26 @@ void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomLis
     }
 }
 
+/*****************************************
+ *             Game Saver                *
+ *****************************************/
+void saveGame(FILE *f)
+{
+   
+    printf("Save worked");
+
+    fclose(f);
+}
+
+/*****************************************
+ *            Game Loader                *
+ *****************************************/
+void loadGame(FILE *f)
+{
+    
+    printf("Load worked");
+    fclose(f);
+}
 
 /*****************************************
  *            Game Printer               *
