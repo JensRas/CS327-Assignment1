@@ -20,6 +20,7 @@
 #define rockChar '.'
 #define upChar '<'
 #define downChar '>'
+#define playerChar '@'
 
 struct tiles {
     int hardness; // Needs to be implemented
@@ -37,20 +38,22 @@ struct rooms {
  *             Prototypes                *
  *****************************************/
 
+void gameGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int roomsWanted);
 void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int roomsWanted);
 void placeBorder(struct tiles floor[floorMaxY][floorMaxX]);
 void roomGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int roomsWanted);
 void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int roomsWanted);
-void printGame(struct tiles floor[floorMaxY][floorMaxX]);
+void playerGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int roomsWanted);
 void saveGame(FILE *fptr);
 void loadGame(FILE *fptr);
+void printGame(struct tiles floor[floorMaxY][floorMaxX]);
 
 /*****************************************
  *                Main                   *
  *****************************************/
 int main(int argc, char *argv[])
 {
-    srand(time(NULL)); // Seed / Random
+    srand(time(NULL)); // Seed/Random
     int roomsWanted = (rand() % ((maxRoomNumber + 1) - minRoomNumber)) + minRoomNumber; // Always min , potential of adding rooms up to max  
 
     struct tiles floor[floorMaxY][floorMaxX];
@@ -60,39 +63,50 @@ int main(int argc, char *argv[])
     bool gameLoaded = false;
     FILE *f;
 
-    for(i = 1; i <= sizeof(*argv) / sizeof(argv[0]); i++){
-        if(!strcmp(argv[i], "--load")){
-            if(!(f = fopen("dungeon", "r"))){
-                fprintf(stderr, "Failed to open file for reading");
-                return -1;
+    if(argc == 2){
+        for(i = 1; i <= argc; i++){
+            if(!strcmp(argv[i], "--load")){
+                if(!(f = fopen("dungeon", "r"))){
+                    fprintf(stderr, "Failed to open file for reading");
+                    return -1;
+                }
+                loadGame(f);
+                gameLoaded = true;
+                break;
             }
-            loadGame(f);
-            gameLoaded = true;
-            break;
         }
     }
 
     if(!gameLoaded){
-        placeBorder(floor);
-        roomGen(floor, roomList, roomsWanted); 
-        corridorGen(floor, roomList, roomsWanted); 
-        staircaseGen(floor, roomList, roomsWanted);
+        gameGen(floor, roomList, roomsWanted);
     }
 
-    for(i = 1; i <= sizeof(*argv) / sizeof(argv[0]); i++){
-        if(!strcmp(argv[i], "--save")){
-            if(!(f = fopen("dungeon", "w"))){
-                fprintf(stderr, "Failed to open file for writing");
-                return -1;
+    if(argc == 2){
+        for(i = 1; i <= argc; i++){
+            if(!strcmp(argv[i], "--save")){
+                if(!(f = fopen("dungeon", "w"))){
+                    fprintf(stderr, "Failed to open file for writing");
+                    return -1;
+                }
+                saveGame(f);
+                break;
             }
-            saveGame(f);
-            break;
         }
     }
-
-    //printGame(floor);
-    
     return 0;
+}
+
+/*****************************************
+ *            Game Generator             *
+ *****************************************/
+void gameGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int roomsWanted)
+{
+    placeBorder(floor);
+    roomGen(floor, roomList, roomsWanted); 
+    corridorGen(floor, roomList, roomsWanted); 
+    staircaseGen(floor, roomList, roomsWanted);
+    playerGen(floor, roomList, roomsWanted);
+    printGame(floor); // Needs to be last in function
 }
 
 /*****************************************
@@ -232,9 +246,28 @@ void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomLis
             ranX2 = roomList[ranUp].cornerX + (rand() % roomList[ranUp].sizeX);
             ranY2 = roomList[ranUp].cornerY + (rand() % roomList[ranUp].sizeY);
         }
-
+        
         floor[ranY][ranX].type = downChar;
         floor[ranY2][ranX2].type = upChar;
+    }
+}
+
+/*****************************************
+ *           Player Generator            *
+ *****************************************/
+void playerGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int roomsWanted) {
+    int ranX, ranY, ran;
+    bool placed = false;
+
+    while(!placed){
+        ran = rand() % roomsWanted;
+        ranX = roomList[ran].cornerX + (rand() % roomList[ran].sizeX);
+        ranY = roomList[ran].cornerY + (rand() % roomList[ran].sizeY);
+        
+        if(floor[ranY][ranX].type != upChar || floor[ranY][ranX].type != downChar){
+            floor[ranY][ranX].type = playerChar;
+            placed = true;
+        }
     }
 }
 
@@ -243,7 +276,6 @@ void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomLis
  *****************************************/
 void saveGame(FILE *f)
 {
-   
     printf("Save worked");
 
     fclose(f);
@@ -254,7 +286,6 @@ void saveGame(FILE *f)
  *****************************************/
 void loadGame(FILE *f)
 {
-    
     printf("Load worked");
     fclose(f);
 }
@@ -282,6 +313,9 @@ void printGame(struct tiles floor[floorMaxY][floorMaxX])
                     break;
                 case downChar :
                     printf("%c", downChar);
+                    break;
+                case playerChar :
+                    printf("%c", playerChar);
                     break;
                 case rockChar :
                     printf("%c", rockChar);

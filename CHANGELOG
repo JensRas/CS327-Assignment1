@@ -1,3 +1,4 @@
+Assignment 1.01
 2/8/21 8:24 PM JCR JTG TOM: Started assignment, created structs for tiles and rooms, created arrays for the floor and the rooms
 2/8/21 9:30 PM JCR TOM: Implemented print function
 2/9/21 1:00 PM JCR JTG TOM: Started implementing the roomGen
@@ -5,5 +6,5 @@
 2/10/21 7:00 PM JCR TOM: Implemented staircaseGen, Fixed Makefile
 2/10/21 7:45 PM JCR JTG TOM: Bug tested and attempted to fix weird errors for three hours
 2/11/21 1:00 PM JCR JTG TOM: Fixed array bugs, pointer problems, and updated [x][y] to [y][x] (row major) cleared debug comments. 
-End of Assignment 1.01 
+Assignment 1.02 
 2/15/21 7:00 PM TOM JCR: Created the saveGame and loadGame functions, laid the groundwork for reading and writing files, reorganized
