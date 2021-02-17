@@ -338,14 +338,14 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
     fwrite(&size, 4, 1, f);
 
     // Player Character location
-    fwrite(&player.y, 1, 1, f);
     fwrite(&player.x, 1, 1, f);
+    fwrite(&player.y, 1, 1, f);
     
     // Dungeon hardness
     int i, j;
     for(i = 0; i < floorMaxY; i++){
         for(j = 0; j < floorMaxX; j++){
-            fwrite(&floor[i][j].hardness, 4, 1, f);
+            fwrite(&floor[i][j].hardness, 1, 1, f);
         }
     }
 
@@ -354,10 +354,10 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
     fwrite(&roomNum, 2, 1, f);
 
     for(i = 0; i < roomsWanted; i++){
-        fwrite(&roomList[i].cornerY, 1, 1, f);
         fwrite(&roomList[i].cornerX, 1, 1, f);
-        fwrite(&roomList[i].sizeY, 1, 1, f);
+        fwrite(&roomList[i].cornerY, 1, 1, f);
         fwrite(&roomList[i].sizeX, 1, 1, f);
+        fwrite(&roomList[i].sizeY, 1, 1, f);
     }
     
     // Number of up stairs
@@ -366,8 +366,8 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
 
     // Location of up stairs
     for(i = 0; i < numStairs; i++) {
-        fwrite(&stairListU[i].y, 1, 1, f);
         fwrite(&stairListU[i].x, 1, 1, f);
+        fwrite(&stairListU[i].y, 1, 1, f);
     }
 
     // Number of down stairs
@@ -376,8 +376,8 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
 
     // Location of up stairs
     for(i = 0; i < numStairs; i++) {
-        fwrite(&stairListD[i].y, 1, 1, f);
         fwrite(&stairListD[i].x, 1, 1, f);
+        fwrite(&stairListD[i].y, 1, 1, f);
     }
 }
 
@@ -386,7 +386,6 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
  *****************************************/
 void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc player)
 {
-    printf("Load worked"); // Tester
     // Semantic file-type marker
     char semantic[13];
     semantic[12] = '\0';
@@ -403,16 +402,20 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
     size = be32toh(size);
 
     // Player Character location
-    fread(&player.y, 1, 1, f);
     fread(&player.x, 1, 1, f);
+    fread(&player.y, 1, 1, f);
     floor[player.y][player.x].type = playerChar;
     
     // Dungeon hardness
     int i, j, k;
     for(i = 0; i < floorMaxY; i++){
         for(j = 0; j < floorMaxX; j++){
-            fread(&floor[i][j].hardness, 4, 1, f);
-            floor[i][j].type = corridorChar;
+            fread(&floor[i][j].hardness, 1, 1, f);
+            if(floor[i][j].hardness == 0 && floor[i][j].type != playerChar){
+                floor[i][j].type = corridorChar;
+            } else if(floor[i][j].hardness == 255){
+                floor[i][j].type = edgeChar;
+            }
         }
     }
 
@@ -422,14 +425,16 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
     roomsWanted = be16toh(roomsWanted);
 
     for(i = 0; i < roomsWanted; i++){
-        fread(&roomList[i].cornerY, 1, 1, f);
         fread(&roomList[i].cornerX, 1, 1, f);
-        fread(&roomList[i].sizeY, 1, 1, f);
+        fread(&roomList[i].cornerY, 1, 1, f);
         fread(&roomList[i].sizeX, 1, 1, f);
-        //special case
+        fread(&roomList[i].sizeY, 1, 1, f);
+        
         for(j = 0; j < roomList[i].sizeY; j++){
             for(k = 0; k < roomList[i].sizeX; k++){
-                floor[roomList[j].cornerY][roomList[k].cornerX].type = roomChar;
+                if(floor[roomList[j].cornerY][roomList[k].cornerX].type != playerChar){
+                    floor[roomList[j].cornerY][roomList[k].cornerX].type = roomChar;
+                }
             }
         }
     }
@@ -441,8 +446,8 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
     
     // Location of up stairs
     for(i = 0; i < upNum; i++) {
-        fread(&stairListU[i].y, 1, 1, f);
         fread(&stairListU[i].x, 1, 1, f);
+        fread(&stairListU[i].y, 1, 1, f);
         floor[stairListU[i].y][stairListU->x].type = upChar;
     }
 
@@ -453,8 +458,8 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
 
     // Location of up stairs
     for(i = 0; i < downNum; i++) {
-        fread(&stairListD[i].y, 1, 1, f);
         fread(&stairListD[i].x, 1, 1, f);
+        fread(&stairListD[i].y, 1, 1, f);
         floor[stairListD[i].y][stairListD->x].type = downChar;
     }
     printGame(floor);
