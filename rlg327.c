@@ -28,6 +28,7 @@
 /* struct dungeon {
     
 }; */
+int roomNumber;
 
 struct tiles {
     uint8_t hardness; // Needs to be implemented
@@ -38,7 +39,7 @@ struct rooms {
     int8_t cornerX; // Top left
     int8_t cornerY; // Top left
     int8_t sizeX;
-    int8_t sizeY; 
+    int8_t sizeY;
 };
 
 struct pc { 
@@ -107,7 +108,7 @@ int main(int argc, char *argv[])
     if(!gameLoaded){
         gameGen(floor, &roomList, stairListU, stairListD, &player);
     }
-
+    
     if(argc >= 2){
         for(i = 1; i < argc; i++){
             if(!strcmp(argv[i], "--save")){
@@ -130,10 +131,10 @@ int main(int argc, char *argv[])
  *****************************************/
 void gameGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms **roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player)
 {
-
     int16_t roomsWanted = (rand() % ((maxRoomNumber + 1) - minRoomNumber)) + minRoomNumber;
-    *roomList = malloc(roomsWanted * sizeof(*roomList));
-    
+    *roomList = malloc(roomsWanted * sizeof(**roomList));
+    roomNumber = roomsWanted;
+
     int16_t numStairs = ((rand() % roomsWanted) / 3);
     numStairs = (numStairs < 1) ? 1 : numStairs;
 
@@ -340,10 +341,10 @@ char *findFilePath()
 void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], 
               struct stairs stairListD[maxStairNum], struct pc player)
 {
-    int numRooms = sizeof(*roomList) / sizeof(roomList[0]);
+    int numRooms = roomNumber;
     int UstairNum = sizeof(*stairListU) / sizeof(stairListU[0]);
     int DstairNum = sizeof(*stairListD) / sizeof(stairListD[0]);
-
+    
     // Semantic file-type marker
     char semantic[] = "RLG327-S2021";
     fwrite(semantic, 1, 12, f);
@@ -354,7 +355,7 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *r
     fwrite(&version, 4, 1, f);
 
     // File size
-    int32_t size = 1708 + ((4 * numRooms) + (2 * DstairNum) + (2 * UstairNum));
+    int32_t size = 1708 + 4 * numRooms + 2 * DstairNum + 2 * UstairNum;
     size = htobe32(size);
     fwrite(&size, 4, 1, f);
 
@@ -374,7 +375,7 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *r
     int16_t roomNum = htobe16(numRooms);
     fwrite(&roomNum, 2, 1, f);
 
-    for(i = 0; i < sizeof(roomNum); i++){
+    for(i = 0; i < roomNumber; i++){
         fwrite(&roomList[i].cornerX, 1, 1, f);
         fwrite(&roomList[i].cornerY, 1, 1, f);
         fwrite(&roomList[i].sizeX, 1, 1, f);
@@ -452,7 +453,8 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *r
     fread(&roomsWanted, 2, 1, f);
     roomsWanted = be16toh(roomsWanted);
 
-    roomList = malloc(roomsWanted * sizeof(*roomList));
+    roomList = malloc(roomList, roomsWanted * sizeof(*roomList));
+    roomNumber = roomsWanted;
 
     for(i = 0; i < roomsWanted; i++){
         //printf("cX: %d, cY: %d, sX: %d, sY %d\n\n", tempCornerX, tempCornerY, tempSizeX, tempSizeY);
