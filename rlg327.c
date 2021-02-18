@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <endian.h>
+#include <stdint.h>
 
 #define minRoomNumber 6
 #define maxRoomNumber 10
@@ -39,7 +40,7 @@ struct rooms {
 struct pc { 
     int8_t x;
     int8_t y;
-} player;
+};
 
 struct stairs {
     int8_t x;
@@ -66,14 +67,17 @@ void printGame(struct tiles floor[floorMaxY][floorMaxX]);
  *****************************************/
 int main(int argc, char *argv[])
 {
-    srand(1); // Seed/Random
+    srand(time(NULL)); // Seed/Random
     int16_t roomsWanted = (rand() % ((maxRoomNumber + 1) - minRoomNumber)) + minRoomNumber; // Always min , potential of adding rooms up to max
     int numStairs = ((rand() % roomsWanted) / 3);
     numStairs = (numStairs < 1) ? 1 : numStairs;
-    struct tiles floor[floorMaxY][floorMaxX];
+    //struct rooms *roomList = NULL;
+    //roomList = malloc(roomsWanted * sizeof(int));
     struct rooms roomList[roomsWanted];
+    struct tiles floor[floorMaxY][floorMaxX];
     struct stairs stairListU[maxStairNum];
     struct stairs stairListD[maxStairNum];
+    struct pc player;
 
     int i;
     bool gameLoaded = false;
@@ -182,7 +186,7 @@ void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList
                 l--;
                 if(floor[ranY - j][ranX].type != roomChar){
                     floor[ranY - j][ranX].type = corridorChar;
-                    floor[ranY + j][ranX].hardness = 0;
+                    floor[ranY - j][ranX].hardness = 0;
                 }
             }
         }
@@ -191,13 +195,13 @@ void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList
             if(ranX < ranX2){
                 if(floor[ranY + l][ranX + k].type != roomChar){
                     floor[ranY + l][ranX + k].type = corridorChar;
-                    floor[ranY + j][ranX].hardness = 0;
+                    floor[ranY + l][ranX + k].hardness = 0;
                 }
             }
             else {
                 if(floor[ranY + l][ranX - k].type != roomChar){
                     floor[ranY + l][ranX - k].type = corridorChar;
-                    floor[ranY + j][ranX].hardness = 0;
+                    floor[ranY + l][ranX - k].hardness = 0;
                 }
             }
         }
