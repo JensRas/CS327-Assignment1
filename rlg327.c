@@ -25,6 +25,10 @@
 #define downChar '>' //Hardness = 0
 #define playerChar '@'
 
+/* struct dungeon {
+    
+}; */
+
 struct tiles {
     uint8_t hardness; // Needs to be implemented
     unsigned char type;
@@ -51,16 +55,19 @@ struct stairs {
  *             Prototypes                *
  *****************************************/
 
-void gameGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc player, int16_t roomsWanted, int numStairs);
-void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int16_t roomsWanted);
+void gameGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms **roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player);
+void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, int16_t roomsWanted);
 void borderGen(struct tiles floor[floorMaxY][floorMaxX]);
-void roomGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int16_t roomsWanted);
-void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], int16_t roomsWanted, int numStairs);
-void playerGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], struct pc player, int16_t roomsWanted);
+void roomGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, int16_t roomsWanted);
+void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], int16_t roomsWanted, int16_t numStairs);
+void playerGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct pc *player, int16_t roomsWanted);
 char *findFilePath();
-void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc player, int16_t roomsWanted, int numStairs);
-void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc player);
+void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc player);
+void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player);
 void printGame(struct tiles floor[floorMaxY][floorMaxX]);
+
+//Make dungeon struct
+//Delete dungeon function(cleanup, freeing arrays)
 
 /*****************************************
  *                Main                   *
@@ -68,12 +75,8 @@ void printGame(struct tiles floor[floorMaxY][floorMaxX]);
 int main(int argc, char *argv[])
 {
     srand(time(NULL)); // Seed/Random
-    int16_t roomsWanted = (rand() % ((maxRoomNumber + 1) - minRoomNumber)) + minRoomNumber; // Always min , potential of adding rooms up to max
-    int numStairs = ((rand() % roomsWanted) / 3);
-    numStairs = (numStairs < 1) ? 1 : numStairs;
-    //struct rooms *roomList = NULL;
-    //roomList = malloc(roomsWanted * sizeof(int));
-    struct rooms roomList[roomsWanted];
+    
+    struct rooms *roomList = NULL;
     struct tiles floor[floorMaxY][floorMaxX];
     struct stairs stairListU[maxStairNum];
     struct stairs stairListD[maxStairNum];
@@ -93,7 +96,8 @@ int main(int argc, char *argv[])
                     fprintf(stderr, "Failed to open file for reading");
                     return -1;
                 }
-                loadGame(f, floor, roomList, stairListU, stairListD, player);
+                
+                loadGame(f, floor, roomList, stairListU, stairListD, &player);
                 gameLoaded = true;
                 break;
             }
@@ -101,7 +105,7 @@ int main(int argc, char *argv[])
     }
 
     if(!gameLoaded){
-        gameGen(floor, roomList, stairListU, stairListD, player, roomsWanted, numStairs);
+        gameGen(floor, &roomList, stairListU, stairListD, &player);
     }
 
     if(argc >= 2){
@@ -111,11 +115,12 @@ int main(int argc, char *argv[])
                     fprintf(stderr, "Failed to open file for writing");
                     return -1;
                 }
-                saveGame(f, floor, roomList, stairListU, stairListD, player, roomsWanted, numStairs);
+                saveGame(f, floor, roomList, stairListU, stairListD, player);
                 break;
             }
         }
     }
+    free(roomList);
 
     return 0;
 }
@@ -123,14 +128,20 @@ int main(int argc, char *argv[])
 /*****************************************
  *            Game Generator             *
  *****************************************/
-void gameGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], struct stairs stairListU[maxStairNum], 
-             struct stairs stairListD[maxStairNum], struct pc player, int16_t roomsWanted, int numStairs)
+void gameGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms **roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player)
 {
+
+    int16_t roomsWanted = (rand() % ((maxRoomNumber + 1) - minRoomNumber)) + minRoomNumber;
+    *roomList = malloc(roomsWanted * sizeof(*roomList));
+    
+    int16_t numStairs = ((rand() % roomsWanted) / 3);
+    numStairs = (numStairs < 1) ? 1 : numStairs;
+
     borderGen(floor);
-    roomGen(floor, roomList, roomsWanted); 
-    corridorGen(floor, roomList, roomsWanted); 
-    staircaseGen(floor, roomList, stairListU, stairListD, roomsWanted, numStairs);
-    playerGen(floor, roomList, player, roomsWanted);
+    roomGen(floor, *roomList, roomsWanted); 
+    corridorGen(floor, *roomList, roomsWanted); 
+    staircaseGen(floor, *roomList, stairListU, stairListD, roomsWanted, numStairs);
+    playerGen(floor, *roomList, player, roomsWanted);
     printGame(floor); // Needs to be last in function
 }
 
@@ -157,7 +168,7 @@ void borderGen(struct tiles floor[floorMaxY][floorMaxX])
 /*****************************************
  *         Corridor Generator            *
  *****************************************/
-void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int16_t roomsWanted) 
+void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, int16_t roomsWanted) 
 {
     int i, j, k, ranX, ranY, ranX2, ranY2;
 
@@ -211,10 +222,11 @@ void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList
 /*****************************************
  *           Room Generator              *
  *****************************************/
-void roomGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], int16_t roomsWanted)
+void roomGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, int16_t roomsWanted)
 {
     int i, j, k, failCount = 0;
     bool placedAll = false;
+    
 
     while(!placedAll){
         placedAll = true;
@@ -257,9 +269,10 @@ void roomGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[max
 /*****************************************
  *         Staircase Generator           *
  *****************************************/
-void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], struct stairs stairListU[maxStairNum], 
-                  struct stairs stairListD[maxStairNum], int16_t roomsWanted, int numStairs) {
+void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], int16_t roomsWanted, int16_t numStairs) 
+{
     int i, ranX, ranY, ranX2, ranY2, ranDown, ranUp;
+
     
 
     for(i = 0; i < numStairs; i++){
@@ -289,7 +302,7 @@ void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomLis
 /*****************************************
  *           Player Generator            *
  *****************************************/
-void playerGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], struct pc player, int16_t roomsWanted) {
+void playerGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct pc *player, int16_t roomsWanted) {
     int ranY, ranX, ran;
     bool placed = false;
 
@@ -299,9 +312,9 @@ void playerGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[m
         ranX = roomList[ran].cornerX + (rand() % roomList[ran].sizeX);
         
         if(floor[ranY][ranX].type != upChar && floor[ranY][ranX].type != downChar){
-            player.y = ranY;
-            player.x = ranX;
-            floor[player.y][player.x].type = playerChar;
+            player->y = ranY;
+            player->x = ranX;
+            floor[player->y][player->x].type = playerChar;
             placed = true;
         }
     }
@@ -324,9 +337,13 @@ char *findFilePath()
 /*****************************************
  *             Game Saver                *
  *****************************************/
-void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], struct stairs stairListU[maxStairNum], 
-              struct stairs stairListD[maxStairNum], struct pc player, int16_t roomsWanted, int numStairs)
+void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], 
+              struct stairs stairListD[maxStairNum], struct pc player)
 {
+    int numRooms = sizeof(*roomList) / sizeof(roomList[0]);
+    int UstairNum = sizeof(*stairListU) / sizeof(stairListU[0]);
+    int DstairNum = sizeof(*stairListD) / sizeof(stairListD[0]);
+
     // Semantic file-type marker
     char semantic[] = "RLG327-S2021";
     fwrite(semantic, 1, 12, f);
@@ -337,7 +354,7 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
     fwrite(&version, 4, 1, f);
 
     // File size
-    int32_t size = 1708 + (roomsWanted * 4) + (2 * numStairs * 2);
+    int32_t size = 1708 + ((4 * numRooms) + (2 * DstairNum) + (2 * UstairNum));
     size = htobe32(size);
     fwrite(&size, 4, 1, f);
 
@@ -354,10 +371,10 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
     }
 
     // Number of rooms
-    int16_t roomNum = htobe16(roomsWanted);
+    int16_t roomNum = htobe16(numRooms);
     fwrite(&roomNum, 2, 1, f);
 
-    for(i = 0; i < roomsWanted; i++){
+    for(i = 0; i < sizeof(roomNum); i++){
         fwrite(&roomList[i].cornerX, 1, 1, f);
         fwrite(&roomList[i].cornerY, 1, 1, f);
         fwrite(&roomList[i].sizeX, 1, 1, f);
@@ -365,21 +382,21 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
     }
     
     // Number of up stairs
-    int16_t upNum = htobe16(numStairs);
+    int16_t upNum = htobe16(UstairNum);
     fwrite(&upNum, 2, 1, f);
 
     // Location of up stairs
-    for(i = 0; i < numStairs; i++) {
+    for(i = 0; i < UstairNum; i++) {
         fwrite(&stairListU[i].x, 1, 1, f);
         fwrite(&stairListU[i].y, 1, 1, f);
     }
 
     // Number of down stairs
-    int16_t downNum = htobe16(numStairs);
+    int16_t downNum = htobe16(DstairNum);
     fwrite(&downNum, 2, 1, f);
 
     // Location of up stairs
-    for(i = 0; i < numStairs; i++) {
+    for(i = 0; i < DstairNum; i++) {
         fwrite(&stairListD[i].x, 1, 1, f);
         fwrite(&stairListD[i].y, 1, 1, f);
     }
@@ -389,8 +406,9 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
 /*****************************************
  *            Game Loader                *
  *****************************************/
-void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc player)
+void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player)
 {
+    //free(roomList);
     // Semantic file-type marker
     char semantic[13];
     semantic[12] = '\0';
@@ -407,9 +425,9 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
     size = be32toh(size);
 
     // Player Character location
-    fread(&player.x, 1, 1, f);
-    fread(&player.y, 1, 1, f);
-    floor[player.y][player.x].type = playerChar;
+    fread(&player->x, 1, 1, f);
+    fread(&player->y, 1, 1, f);
+    floor[player->y][player->x].type = playerChar;
    
     // Dungeon hardness
     int i, j, k;
@@ -433,6 +451,8 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
     int16_t roomsWanted;
     fread(&roomsWanted, 2, 1, f);
     roomsWanted = be16toh(roomsWanted);
+
+    roomList = malloc(roomsWanted * sizeof(*roomList));
 
     for(i = 0; i < roomsWanted; i++){
         //printf("cX: %d, cY: %d, sX: %d, sY %d\n\n", tempCornerX, tempCornerY, tempSizeX, tempSizeY);
