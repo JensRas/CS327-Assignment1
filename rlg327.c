@@ -25,25 +25,25 @@
 #define playerChar '@'
 
 struct tiles {
-    int hardness; // Needs to be implemented
-    char type;
+    uint8_t hardness; // Needs to be implemented
+    unsigned char type;
 };
 
 struct rooms {
-    int cornerX; // Top left
-    int cornerY; // Top left
-    int sizeX;
-    int sizeY; 
+    int8_t cornerX; // Top left
+    int8_t cornerY; // Top left
+    int8_t sizeX;
+    int8_t sizeY; 
 };
 
 struct pc { 
-    int x;
-    int y;
-};
+    int8_t x;
+    int8_t y;
+} player;
 
 struct stairs {
-    int x;
-    int y;
+    int8_t x;
+    int8_t y;
 };
 
 /*****************************************
@@ -66,7 +66,7 @@ void printGame(struct tiles floor[floorMaxY][floorMaxX]);
  *****************************************/
 int main(int argc, char *argv[])
 {
-    srand(time(NULL)); // Seed/Random
+    srand(1); // Seed/Random
     int16_t roomsWanted = (rand() % ((maxRoomNumber + 1) - minRoomNumber)) + minRoomNumber; // Always min , potential of adding rooms up to max
     int numStairs = ((rand() % roomsWanted) / 3);
     numStairs = (numStairs < 1) ? 1 : numStairs;
@@ -74,7 +74,6 @@ int main(int argc, char *argv[])
     struct rooms roomList[roomsWanted];
     struct stairs stairListU[maxStairNum];
     struct stairs stairListD[maxStairNum];
-    struct pc player;
 
     int i;
     bool gameLoaded = false;
@@ -83,9 +82,10 @@ int main(int argc, char *argv[])
     printf("%s\n", findFilePath());
 
     if(argc >= 2){
-        for(i = 1; i <= argc; i++){
+        for(i = 1; i < argc; i++){
             if(!strcmp(argv[i], "--load")){
-                if(!(f = fopen("/home/Thomas McCoy/COM327-HW/CS327-Assignment1/samples/00.rlg327", "rb"))){
+                //printf("pass");
+                if(!(f = fopen(findFilePath(), "rb"))){
                     fprintf(stderr, "Failed to open file for reading");
                     return -1;
                 }
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
     }
 
     if(argc >= 2){
-        for(i = 1; i <= argc; i++){
+        for(i = 1; i < argc; i++){
             if(!strcmp(argv[i], "--save")){
                 if(!(f = fopen(findFilePath(), "wb"))){
                     fprintf(stderr, "Failed to open file for writing");
@@ -112,6 +112,7 @@ int main(int argc, char *argv[])
             }
         }
     }
+
     return 0;
 }
 
@@ -293,7 +294,7 @@ void playerGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[m
         ranY = roomList[ran].cornerY + (rand() % roomList[ran].sizeY);
         ranX = roomList[ran].cornerX + (rand() % roomList[ran].sizeX);
         
-        if(floor[ranY][ranX].type != upChar || floor[ranY][ranX].type != downChar){
+        if(floor[ranY][ranX].type != upChar && floor[ranY][ranX].type != downChar){
             player.y = ranY;
             player.x = ranX;
             floor[player.y][player.x].type = playerChar;
@@ -311,7 +312,7 @@ char *findFilePath()
     char *temp = "COM327-HW/CS327-Assignment1";
     char *gameDir = ".rlg327";
     char *saveFile = "dungeon";
-    char *path = malloc((strlen(home) + strlen(temp) + strlen(gameDir) + strlen(saveFile) + 2 + 1) * sizeof(char));
+    char *path = malloc((strlen(home) + strlen(temp) + strlen(gameDir) + strlen(saveFile) + 3 + 1) * sizeof(char));
     sprintf(path, "%s/%s/%s/%s", home, temp, gameDir, saveFile); // Get rid of temp
     return path;
 }
@@ -322,7 +323,6 @@ char *findFilePath()
 void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms roomList[maxRoomNumber], struct stairs stairListU[maxStairNum], 
               struct stairs stairListD[maxStairNum], struct pc player, int16_t roomsWanted, int numStairs)
 {
-    //printf("Save worked"); // Tester
     // Semantic file-type marker
     char semantic[] = "RLG327-S2021";
     fwrite(semantic, 1, 12, f);
@@ -379,6 +379,7 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
         fwrite(&stairListD[i].x, 1, 1, f);
         fwrite(&stairListD[i].y, 1, 1, f);
     }
+    fclose(f);
 }
 
 /*****************************************
@@ -405,35 +406,41 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
     fread(&player.x, 1, 1, f);
     fread(&player.y, 1, 1, f);
     floor[player.y][player.x].type = playerChar;
-    
+   
     // Dungeon hardness
     int i, j, k;
     for(i = 0; i < floorMaxY; i++){
         for(j = 0; j < floorMaxX; j++){
             fread(&floor[i][j].hardness, 1, 1, f);
             if(floor[i][j].hardness == 0 && floor[i][j].type != playerChar){
-                floor[i][j].type = corridorChar;
-            } else if(floor[i][j].hardness == 255){
+                floor[i][j].type = corridorChar; 
+            } else if(floor[i][j].hardness != 0){
+                floor[i][j].type = rockChar;
+            } 
+            if(floor[i][j].hardness == 255){
                 floor[i][j].type = edgeChar;
             }
+            //printf("%3d ", floor[i][j].hardness);
         }
+        //printf("\n");
     }
-
+    
     // Number of rooms
     int16_t roomsWanted;
     fread(&roomsWanted, 2, 1, f);
     roomsWanted = be16toh(roomsWanted);
 
     for(i = 0; i < roomsWanted; i++){
+        //printf("cX: %d, cY: %d, sX: %d, sY %d\n\n", tempCornerX, tempCornerY, tempSizeX, tempSizeY);
         fread(&roomList[i].cornerX, 1, 1, f);
         fread(&roomList[i].cornerY, 1, 1, f);
         fread(&roomList[i].sizeX, 1, 1, f);
         fread(&roomList[i].sizeY, 1, 1, f);
-        
-        for(j = 0; j < roomList[i].sizeY; j++){
-            for(k = 0; k < roomList[i].sizeX; k++){
-                if(floor[roomList[j].cornerY][roomList[k].cornerX].type != playerChar){
-                    floor[roomList[j].cornerY][roomList[k].cornerX].type = roomChar;
+   
+        for (j = 0; j < roomList[i].sizeY; j++) {
+            for (k = 0; k < roomList[i].sizeX; k++) {
+                if(floor[roomList[i].cornerY + j][roomList[i].cornerX + k].type != playerChar){
+                    floor[roomList[i].cornerY + j][roomList[i].cornerX + k].type = roomChar;
                 }
             }
         }
@@ -448,7 +455,7 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
     for(i = 0; i < upNum; i++) {
         fread(&stairListU[i].x, 1, 1, f);
         fread(&stairListU[i].y, 1, 1, f);
-        floor[stairListU[i].y][stairListU->x].type = upChar;
+        floor[stairListU[i].y][stairListU[i].x].type = upChar;
     }
 
     // Number of down stairs
@@ -456,12 +463,13 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms ro
     fread(&downNum, 2, 1, f);
     downNum = be16toh(downNum);
 
-    // Location of up stairs
+    // Location of down stairs
     for(i = 0; i < downNum; i++) {
         fread(&stairListD[i].x, 1, 1, f);
         fread(&stairListD[i].y, 1, 1, f);
-        floor[stairListD[i].y][stairListD->x].type = downChar;
+        floor[stairListD[i].y][stairListD[i].x].type = downChar;
     }
+    
     printGame(floor);
     fclose(f);
 }
