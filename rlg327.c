@@ -25,9 +25,6 @@
 #define downChar '>' //Hardness = 0
 #define playerChar '@'
 
-struct dungeon {
-    
-}; 
 int roomNumber;
 
 struct tiles {
@@ -51,6 +48,14 @@ struct stairs {
     int8_t x;
     int8_t y;
 };
+
+struct dungeon {
+    struct tiles floor[floorMaxY][floorMaxX];
+    struct rooms *roomList;
+    struct stairs stairListU[maxStairNum];
+    struct stairs stairListD[maxStairNum];
+    struct pc player;
+}; 
 
 /*****************************************
  *             Prototypes                *
