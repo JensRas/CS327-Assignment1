@@ -25,9 +25,9 @@
 #define downChar '>' //Hardness = 0
 #define playerChar '@'
 
-/* struct dungeon {
+struct dungeon {
     
-}; */
+}; 
 int roomNumber;
 
 struct tiles {
