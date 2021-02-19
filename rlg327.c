@@ -11,69 +11,68 @@
 
 #define minRoomNumber 6
 #define maxRoomNumber 10
-#define maxStairNum 3 // Arbitrary value that can be changed
-#define maxRoomSize 10 // Arbitrary value that can be changed
+#define maxStairNum 3       // Arbitrary value that can be changed
+#define maxRoomSize 10      // Arbitrary value that can be changed
 #define minRoomX 4
 #define minRoomY 3
 #define floorMaxX 80
 #define floorMaxY 21
-#define edgeChar '#' //Hardness = 255
-#define roomChar ' ' //Hardness = 0
-#define corridorChar 'o' //Hardness = 0
-#define rockChar '.' //Hardness = 100 (Non-zero, non-255)
-#define upChar '<' //Hardness = 0
-#define downChar '>' //Hardness = 0
-#define playerChar '@'
+#define edgeChar '#'        //Hardness = 255
+#define roomChar ' '        //Hardness = 0
+#define corridorChar 'o'    //Hardness = 0
+#define rockChar '.'        //Hardness = 100 (Non-zero, non-255)
+#define upChar '<'          //Hardness = 0
+#define downChar '>'        //Hardness = 0
+#define playerChar '@'      
 
-int roomNumber;
+typedef struct tile {
+    uint8_t hardness;
+    char type; // Unsigned?
+} tile;
 
-struct tiles {
-    uint8_t hardness; // Needs to be implemented
-    unsigned char type;
-};
-
-struct rooms {
-    int8_t cornerX; // Top left
-    int8_t cornerY; // Top left
+typedef struct room {
+    int8_t cornerX;     // Top left corner
+    int8_t cornerY;     // Top left corner
     int8_t sizeX;
     int8_t sizeY;
-};
+} room;
 
-struct pc { 
+typedef struct pc { 
     int8_t x;
     int8_t y;
-};
+} pc;
 
-struct stairs {
+typedef struct stair {
     int8_t x;
     int8_t y;
-};
+} stair;
 
-struct dungeon {
-    struct tiles floor[floorMaxY][floorMaxX];
-    struct rooms *roomList;
-    struct stairs stairListU[maxStairNum];
-    struct stairs stairListD[maxStairNum];
-    struct pc player;
-}; 
+typedef struct dungeon {
+    tile floor[floorMaxY][floorMaxX];
+    room *roomList;
+    stair *stairListU;
+    stair *stairListD;
+    pc player;
+    int16_t numRooms;
+    int16_t numUStairs;
+    int16_t numDStairs;
+} dungeon; 
 
 /*****************************************
  *             Prototypes                *
  *****************************************/
 
-void gameGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms **roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player);
-void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, int16_t roomsWanted);
-void borderGen(struct tiles floor[floorMaxY][floorMaxX]);
-void roomGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, int16_t roomsWanted);
-void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], int16_t roomsWanted, int16_t numStairs);
-void playerGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct pc *player, int16_t roomsWanted);
+void gameGen(dungeon *d);
+void corridorGen(dungeon *d);
+void borderGen(dungeon *d);
+void roomGen(dungeon *d);
+void staircaseGen(dungeon *d);
+void playerGen(dungeon *d);
 char *findFilePath();
-void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc player);
-void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms **roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player);
-void printGame(struct tiles floor[floorMaxY][floorMaxX]);
-
-//Make dungeon struct
-//Delete dungeon function(cleanup, freeing arrays)
+void saveGame(FILE *f, dungeon d);
+void loadGame(FILE *f, dungeon *d);
+void printGame(dungeon *d);
+void dungeonDelete(dungeon d);
 
 /*****************************************
  *                Main                   *
@@ -81,29 +80,24 @@ void printGame(struct tiles floor[floorMaxY][floorMaxX]);
 int main(int argc, char *argv[])
 {
     srand(time(NULL)); // Seed/Random
-    
-    struct rooms *roomList = NULL;
-    struct tiles floor[floorMaxY][floorMaxX];
-    struct stairs stairListU[maxStairNum];
-    struct stairs stairListD[maxStairNum];
-    struct pc player;
-
+    dungeon d;
+    d.roomList = NULL;
+    d.stairListU = NULL;
+    d.stairListD = NULL;
     int i;
     bool gameLoaded = false;
     FILE *f;
 
-    printf("%s\n", findFilePath());
+    //printf("%s\n", findFilePath());
 
     if(argc >= 2){
         for(i = 1; i < argc; i++){
             if(!strcmp(argv[i], "--load")){
-                //printf("pass");
-                if(!(f = fopen("/home/Thomas McCoy/COM327-HW/CS327-Assignment1/samples/00.rlg327", "rb"))){
+                if(!(f = fopen(findFilePath(), "rb"))){ //"/cygdrive/u/spring2021/COMS 327/Homework 1.02/CS327-Assignment1/samples/welldone.rlg327"
                     fprintf(stderr, "Failed to open file for reading");
                     return -1;
                 }
-                
-                loadGame(f, floor, &roomList, stairListU, stairListD, &player);
+                loadGame(f, &d);
                 gameLoaded = true;
                 break;
             }
@@ -111,7 +105,7 @@ int main(int argc, char *argv[])
     }
 
     if(!gameLoaded){
-        gameGen(floor, &roomList, stairListU, stairListD, &player);
+        gameGen(&d);
     }
     
     if(argc >= 2){
@@ -121,104 +115,108 @@ int main(int argc, char *argv[])
                     fprintf(stderr, "Failed to open file for writing");
                     return -1;
                 }
-                saveGame(f, floor, roomList, stairListU, stairListD, player);
+                saveGame(f, d);
                 break;
             }
         }
     }
-    free(roomList);
-
+    dungeonDelete(d);
     return 0;
 }
 
 /*****************************************
  *            Game Generator             *
  *****************************************/
-void gameGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms **roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player)
+void gameGen(dungeon *d)
 {
-    int16_t roomsWanted = (rand() % ((maxRoomNumber + 1) - minRoomNumber)) + minRoomNumber;
-    *roomList = malloc(roomsWanted * sizeof(**roomList));
-    roomNumber = roomsWanted;
+    // Finding number of rooms and allocating memory
+    d->numRooms = (rand() % ((maxRoomNumber + 1) - minRoomNumber)) + minRoomNumber;
+    d->roomList = malloc(d->numRooms * sizeof(room));
+    // Finding number of up stairs and allocating memory
+    d->numUStairs = ((rand() % d->numRooms) / 3);
+    d->numUStairs = (d->numUStairs < 1) ? 1 : d->numUStairs;
+    d->stairListU = malloc(d->numUStairs * sizeof(stair));
+    // Finding number of down stairs and allocating memory
+    d->numDStairs = ((rand() % d->numRooms) / 3);
+    d->numDStairs = (d->numDStairs < 1) ? 1 : d->numDStairs;
+    d->stairListD = malloc(d->numDStairs * sizeof(stair));
 
-    int16_t numStairs = ((rand() % roomsWanted) / 3);
-    numStairs = (numStairs < 1) ? 1 : numStairs;
-
-    borderGen(floor);
-    roomGen(floor, *roomList, roomsWanted); 
-    corridorGen(floor, *roomList, roomsWanted); 
-    staircaseGen(floor, *roomList, stairListU, stairListD, roomsWanted, numStairs);
-    playerGen(floor, *roomList, player, roomsWanted);
-    printGame(floor); // Needs to be last in function
+    borderGen(d);
+    roomGen(d); 
+    corridorGen(d); 
+    staircaseGen(d);
+    playerGen(d);
+    printGame(d); // Needs to be last in function
 }
 
 /*****************************************
  *           Border Generator            *
  *****************************************/ 
-void borderGen(struct tiles floor[floorMaxY][floorMaxX])
+void borderGen(dungeon *d)
 {
     int i, j;
-    for(i = 0; i < floorMaxY; i++){ // Top
-        floor[i][0].type = edgeChar;
-        floor[i][0].hardness = 255;
-        floor[i][floorMaxX - 1].type = edgeChar;
-        floor[i][floorMaxX- 1].hardness = 255;
+    for(i = 0; i < floorMaxY; i++){ // Sides
+        d->floor[i][0].type = edgeChar;
+        d->floor[i][0].hardness = 255;
+        d->floor[i][floorMaxX - 1].type = edgeChar;
+        d->floor[i][floorMaxX- 1].hardness = 255;
     }
-    for(j = 0; j < floorMaxX; j++){ // Sides
-        floor[0][j].type = edgeChar;
-        floor[0][j].hardness = 255;
-        floor[floorMaxY - 1][j].type = edgeChar;
-        floor[floorMaxY - 1][j].hardness = 255;
+    for(j = 0; j < floorMaxX; j++){ // Top/Bottom
+        d->floor[0][j].type = edgeChar;
+        d->floor[0][j].hardness = 255;
+        d->floor[floorMaxY - 1][j].type = edgeChar;
+        d->floor[floorMaxY - 1][j].hardness = 255;
     }
 }
 
 /*****************************************
  *         Corridor Generator            *
  *****************************************/
-void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, int16_t roomsWanted) 
+void corridorGen(dungeon *d) 
 {
     int i, j, k, ranX, ranY, ranX2, ranY2;
 
-    for (i = 0; i < roomsWanted; i++) {
-        if(i < roomsWanted - 1) {
-            ranX = roomList[i].cornerX + (rand() % roomList[i].sizeX);
-            ranY = roomList[i].cornerY + (rand() % roomList[i].sizeY);
-            ranX2 = roomList[i + 1].cornerX + (rand() % roomList[i + 1].sizeX);
-            ranY2 = roomList[i + 1].cornerY + (rand() % roomList[i + 1].sizeY);
+    for (i = 0; i < d->numRooms; i++) {
+        if(i < d->numRooms - 1) {
+            ranX = d->roomList[i].cornerX + (rand() % d->roomList[i].sizeX);
+            ranY = d->roomList[i].cornerY + (rand() % d->roomList[i].sizeY);
+            ranX2 = d->roomList[i + 1].cornerX + (rand() % d->roomList[i + 1].sizeX);
+            ranY2 = d->roomList[i + 1].cornerY + (rand() % d->roomList[i + 1].sizeY);
         }else { 
-            ranX = roomList[i].cornerX + (rand() % roomList[i].sizeX);
-            ranY = roomList[i].cornerY + (rand() % roomList[i].sizeY);
-            ranX2 = roomList[0].cornerX + (rand() % roomList[0].sizeX);
-            ranY2 = roomList[0].cornerY + (rand() % roomList[0].sizeY);
+            ranX = d->roomList[i].cornerX + (rand() % d->roomList[i].sizeX);
+            ranY = d->roomList[i].cornerY + (rand() % d->roomList[i].sizeY);
+            ranX2 = d->roomList[0].cornerX + (rand() % d->roomList[0].sizeX);
+            ranY2 = d->roomList[0].cornerY + (rand() % d->roomList[0].sizeY);
         }
         int l = 0;
         for(j = 0; j < abs(ranY - ranY2); j++){
             if(ranY < ranY2){
                 l++;
-                if(floor[ranY + j][ranX].type != roomChar){
-                    floor[ranY + j][ranX].type = corridorChar;
-                    floor[ranY + j][ranX].hardness = 0;
+                if(d->floor[ranY + j][ranX].type != roomChar){
+                    d->floor[ranY + j][ranX].type = corridorChar;
+                    d->floor[ranY + j][ranX].hardness = 0;
                 }
             }
             else{
                 l--;
-                if(floor[ranY - j][ranX].type != roomChar){
-                    floor[ranY - j][ranX].type = corridorChar;
-                    floor[ranY - j][ranX].hardness = 0;
+                if(d->floor[ranY - j][ranX].type != roomChar){
+                    d->floor[ranY - j][ranX].type = corridorChar;
+                    d->floor[ranY - j][ranX].hardness = 0;
                 }
             }
         }
 
         for(k = 0; k < abs(ranX - ranX2); k++){
             if(ranX < ranX2){
-                if(floor[ranY + l][ranX + k].type != roomChar){
-                    floor[ranY + l][ranX + k].type = corridorChar;
-                    floor[ranY + l][ranX + k].hardness = 0;
+                if(d->floor[ranY + l][ranX + k].type != roomChar){
+                    d->floor[ranY + l][ranX + k].type = corridorChar;
+                    d->floor[ranY + l][ranX + k].hardness = 0;
                 }
             }
             else {
-                if(floor[ranY + l][ranX - k].type != roomChar){
-                    floor[ranY + l][ranX - k].type = corridorChar;
-                    floor[ranY + l][ranX - k].hardness = 0;
+                if(d->floor[ranY + l][ranX - k].type != roomChar){
+                    d->floor[ranY + l][ranX - k].type = corridorChar;
+                    d->floor[ranY + l][ranX - k].hardness = 0;
                 }
             }
         }
@@ -228,41 +226,40 @@ void corridorGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomLis
 /*****************************************
  *           Room Generator              *
  *****************************************/
-void roomGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, int16_t roomsWanted)
+void roomGen(dungeon *d)
 {
-    int i, j, k, failCount = 0;
+    int i, j, k, failCount = 0; // For testing
     bool placedAll = false;
-    
 
     while(!placedAll){
         placedAll = true;
         // Set everything (not border) to rock
         for(i = 1; i < floorMaxY - 1; i++) { 
             for (j = 1; j < floorMaxX - 1; j++) {
-                floor[i][j].type = rockChar;
-                floor[i][j].hardness = 100;
+                d->floor[i][j].type = rockChar;
+                d->floor[i][j].hardness = 100;
             }
         }
         
-        for(i = 0; i < roomsWanted; i++){
-            roomList[i].sizeX = rand() % (maxRoomSize - minRoomX) + minRoomX;
-            roomList[i].sizeY = rand() % (maxRoomSize - minRoomY) + minRoomY;
-            roomList[i].cornerX = rand() % (floorMaxX - roomList[i].sizeX - 2);
-            roomList[i].cornerY = rand() % (floorMaxY - roomList[i].sizeY - 2);
+        for(i = 0; i < d->numRooms; i++){
+            d->roomList[i].sizeX = rand() % (maxRoomSize - minRoomX) + minRoomX;
+            d->roomList[i].sizeY = rand() % (maxRoomSize - minRoomY) + minRoomY;
+            d->roomList[i].cornerX = rand() % (floorMaxX - d->roomList[i].sizeX - 2);
+            d->roomList[i].cornerY = rand() % (floorMaxY - d->roomList[i].sizeY - 2);
 
-            for (j = -1; j < roomList[i].sizeY + 1; j++) {
-                for (k = -1; k < roomList[i].sizeX + 1; k++) {
-                    if(floor[roomList[i].cornerY + j][roomList[i].cornerX + k].type == roomChar || 
-                        floor[roomList[i].cornerY + j][roomList[i].cornerX + k].type == edgeChar){
+            for (j = -1; j < d->roomList[i].sizeY + 1; j++) {
+                for (k = -1; k < d->roomList[i].sizeX + 1; k++) {
+                    if(d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k].type == roomChar || 
+                        d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k].type == edgeChar){
                         placedAll = false;
                     }
                 }
             } 
             if(placedAll){
-                for (j = 0; j < roomList[i].sizeY; j++) {
-                    for (k = 0; k < roomList[i].sizeX; k++) {
-                        floor[roomList[i].cornerY + j][roomList[i].cornerX + k].type = roomChar;
-                        floor[roomList[i].cornerY + j][roomList[i].cornerX + k].hardness = 0;
+                for (j = 0; j < d->roomList[i].sizeY; j++) {
+                    for (k = 0; k < d->roomList[i].sizeX; k++) {
+                        d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k].type = roomChar;
+                        d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k].hardness = 0;
                     }
                 }
             }
@@ -275,52 +272,51 @@ void roomGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, i
 /*****************************************
  *         Staircase Generator           *
  *****************************************/
-void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], int16_t roomsWanted, int16_t numStairs) 
+void staircaseGen(dungeon *d) 
 {
-    int i, ranX, ranY, ranX2, ranY2, ranDown, ranUp;
-
-    
-
-    for(i = 0; i < numStairs; i++){
-        ranX = 0, ranY = 0, ranX2 = 0, ranY2 = 0, ranDown = 0, ranUp = 0;
+    int i, ranX, ranY, ran;
+    // Up staircases
+    for(i = 0; i < d->numUStairs; i++){
+        ran = rand() % d->numRooms;
         
-        ranDown = rand() % roomsWanted;
-        ranUp = rand() % roomsWanted;
-        
-        while(ranX == ranX2 && ranY == ranY2) {
-            ranX = roomList[ranDown].cornerX + (rand() % roomList[ranDown].sizeX);
-            ranY = roomList[ranDown].cornerY + (rand() % roomList[ranDown].sizeY);
-            ranX2 = roomList[ranUp].cornerX + (rand() % roomList[ranUp].sizeX);
-            ranY2 = roomList[ranUp].cornerY + (rand() % roomList[ranUp].sizeY);
-        }
+        ranY = d->roomList[ran].cornerY + (rand() % d->roomList[ran].sizeY);
+        ranX = d->roomList[ran].cornerX + (rand() % d->roomList[ran].sizeX);
 
-        stairListD[i].x = ranX;
-        stairListD[i].y = ranY;
+        d->stairListU[i].y = ranY;
+        d->stairListU[i].x = ranX;
 
-        stairListU[i].x = ranX2;
-        stairListU[i].y = ranY2;
+        d->floor[ranY][ranX].type = upChar;
+    }
+    // Down staircases
+    for(i = 0; i < d->numDStairs; i++){
+        ran = rand() % d->numRooms;
         
-        floor[ranY][ranX].type = downChar;
-        floor[ranY2][ranX2].type = upChar;
+        ranY = d->roomList[ran].cornerY + (rand() % d->roomList[ran].sizeY);
+        ranX = d->roomList[ran].cornerX + (rand() % d->roomList[ran].sizeX);
+
+        d->stairListD[i].y = ranY;
+        d->stairListD[i].x = ranX;
+
+        d->floor[ranY][ranX].type = downChar;
     }
 }
 
 /*****************************************
  *           Player Generator            *
  *****************************************/
-void playerGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct pc *player, int16_t roomsWanted) {
+void playerGen(dungeon *d) {
     int ranY, ranX, ran;
     bool placed = false;
 
     while(!placed){
-        ran = rand() % roomsWanted;
-        ranY = roomList[ran].cornerY + (rand() % roomList[ran].sizeY);
-        ranX = roomList[ran].cornerX + (rand() % roomList[ran].sizeX);
+        ran = rand() % d->numRooms;
+        ranY = d->roomList[ran].cornerY + (rand() % d->roomList[ran].sizeY);
+        ranX = d->roomList[ran].cornerX + (rand() % d->roomList[ran].sizeX);
         
-        if(floor[ranY][ranX].type != upChar && floor[ranY][ranX].type != downChar){
-            player->y = ranY;
-            player->x = ranX;
-            floor[player->y][player->x].type = playerChar;
+        if(d->floor[ranY][ranX].type != upChar && d->floor[ranY][ranX].type != downChar){
+            d->player.y = ranY;
+            d->player.x = ranX;
+            d->floor[d->player.y][d->player.x].type = playerChar;
             placed = true;
         }
     }
@@ -330,26 +326,29 @@ void playerGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList,
  *          File Path Finder             *
  *****************************************/
 char *findFilePath()
-{   // Get rid of temp (maybe?)
-    char *home = getenv("HOME");
-    char *temp = "COM327-HW/CS327-Assignment1";
-    char *gameDir = ".rlg327";
-    char *saveFile = "dungeon";
-    char *path = malloc((strlen(home) + strlen(temp) + strlen(gameDir) + strlen(saveFile) + 3 + 1) * sizeof(char));
-    sprintf(path, "%s/%s/%s/%s", home, temp, gameDir, saveFile); // Get rid of temp
+{
+    //char *home = getenv("HOME"); // Final game & Thomas'
+    char *gameDir = ".rlg327"; // Final game
+    char *saveFile = "dungeon"; // Final game
+    //char *path = malloc((strlen(home) + strlen(gameDir) + strlen(saveFile) + 2 + 1)); // Final game
+    //sprintf(path, "%s/%s/%s", home, gameDir, saveFile); // Final game
+
+    //char *thomas = "COM327-HW/CS327-Assignment1"; // Thomas'
+    //char *path = malloc((strlen(home) + strlen(thomas) + strlen(gameDir) + strlen(saveFile) + 3 + 1) * sizeof(char)); // Thomas'
+    //sprintf(path, "%s/%s/%s/%s", home, thomas, gameDir, saveFile); // Thomas'
+
+    char *jens = "/cygdrive/u/spring2021/COMS 327/Homework 1.02/CS327-Assignment1"; // Jens'
+    char *path = malloc((strlen(jens) + strlen(gameDir) + strlen(saveFile) + 2 + 1)); // Jens'
+    sprintf(path, "%s/%s/%s", jens, gameDir, saveFile); // Jens'
+
     return path;
 }
 
 /*****************************************
  *             Game Saver                *
  *****************************************/
-void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], 
-              struct stairs stairListD[maxStairNum], struct pc player)
-{
-    int numRooms = roomNumber;
-    int UstairNum = sizeof(*stairListU) / sizeof(stairListU[0]);
-    int DstairNum = sizeof(*stairListD) / sizeof(stairListD[0]);
-    
+void saveGame(FILE *f, dungeon d)
+{    
     // Semantic file-type marker
     char semantic[] = "RLG327-S2021";
     fwrite(semantic, 1, 12, f);
@@ -360,51 +359,51 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *r
     fwrite(&version, 4, 1, f);
 
     // File size
-    int32_t size = 1708 + 4 * numRooms + 2 * DstairNum + 2 * UstairNum;
+    int32_t size = 1708 + 4 * d.numRooms + 2 * d.numUStairs + 2 * d.numDStairs;
     size = htobe32(size);
     fwrite(&size, 4, 1, f);
 
     // Player Character location
-    fwrite(&player.x, 1, 1, f);
-    fwrite(&player.y, 1, 1, f);
+    fwrite(&d.player.x, 1, 1, f);
+    fwrite(&d.player.y, 1, 1, f);
     
     // Dungeon hardness
     int i, j;
     for(i = 0; i < floorMaxY; i++){
         for(j = 0; j < floorMaxX; j++){
-            fwrite(&floor[i][j].hardness, 1, 1, f);
+            fwrite(&d.floor[i][j].hardness, 1, 1, f);
         }
     }
 
     // Number of rooms
-    int16_t roomNum = htobe16(numRooms);
+    int16_t roomNum = htobe16(d.numRooms);
     fwrite(&roomNum, 2, 1, f);
 
-    for(i = 0; i < roomNumber; i++){
-        fwrite(&roomList[i].cornerX, 1, 1, f);
-        fwrite(&roomList[i].cornerY, 1, 1, f);
-        fwrite(&roomList[i].sizeX, 1, 1, f);
-        fwrite(&roomList[i].sizeY, 1, 1, f);
+    for(i = 0; i < d.numRooms; i++){
+        fwrite(&d.roomList[i].cornerX, 1, 1, f);
+        fwrite(&d.roomList[i].cornerY, 1, 1, f);
+        fwrite(&d.roomList[i].sizeX, 1, 1, f);
+        fwrite(&d.roomList[i].sizeY, 1, 1, f);
     }
     
     // Number of up stairs
-    int16_t upNum = htobe16(UstairNum);
+    int16_t upNum = htobe16(d.numUStairs);
     fwrite(&upNum, 2, 1, f);
 
     // Location of up stairs
-    for(i = 0; i < UstairNum; i++) {
-        fwrite(&stairListU[i].x, 1, 1, f);
-        fwrite(&stairListU[i].y, 1, 1, f);
+    for(i = 0; i < d.numUStairs; i++) {
+        fwrite(&d.stairListU[i].x, 1, 1, f);
+        fwrite(&d.stairListU[i].y, 1, 1, f);
     }
 
     // Number of down stairs
-    int16_t downNum = htobe16(DstairNum);
+    int16_t downNum = htobe16(d.numDStairs);
     fwrite(&downNum, 2, 1, f);
 
     // Location of up stairs
-    for(i = 0; i < DstairNum; i++) {
-        fwrite(&stairListD[i].x, 1, 1, f);
-        fwrite(&stairListD[i].y, 1, 1, f);
+    for(i = 0; i < d.numDStairs; i++) {
+        fwrite(&d.stairListD[i].x, 1, 1, f);
+        fwrite(&d.stairListD[i].y, 1, 1, f);
     }
     fclose(f);
 }
@@ -412,7 +411,7 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *r
 /*****************************************
  *            Game Loader                *
  *****************************************/
-void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms **roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player)
+void loadGame(FILE *f, dungeon *d)
 {
     // Semantic file-type marker
     char semantic[13];
@@ -430,51 +429,43 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms **
     size = be32toh(size);
 
     // Player Character location
-    fread(&player->x, 1, 1, f);
-    fread(&player->y, 1, 1, f);
-    floor[player->y][player->x].type = playerChar;
+    fread(&d->player.x, 1, 1, f);
+    fread(&d->player.y, 1, 1, f);
+    d->floor[d->player.y][d->player.x].type = playerChar;
    
     // Dungeon hardness
     int i, j, k;
     for(i = 0; i < floorMaxY; i++){
         for(j = 0; j < floorMaxX; j++){
-            fread(&floor[i][j].hardness, 1, 1, f);
-            if(floor[i][j].hardness == 0 && floor[i][j].type != playerChar){
-                floor[i][j].type = corridorChar; 
-            } else if(floor[i][j].hardness != 0){
-                floor[i][j].type = rockChar;
+            fread(&d->floor[i][j].hardness, 1, 1, f);
+            if(d->floor[i][j].hardness == 0 && d->floor[i][j].type != playerChar){
+                d->floor[i][j].type = corridorChar; 
+            } else if(d->floor[i][j].hardness != 0){
+                d->floor[i][j].type = rockChar;
             } 
-            if(floor[i][j].hardness == 255){
-                floor[i][j].type = edgeChar;
+            if(d->floor[i][j].hardness == 255){
+                d->floor[i][j].type = edgeChar;
             }
-            //printf("%3d ", floor[i][j].hardness);
         }
-        //printf("\n");
     }
     
     // Number of rooms
     int16_t roomsWanted;
     fread(&roomsWanted, 2, 1, f);
-    roomsWanted = be16toh(roomsWanted);
+    d->numRooms = be16toh(roomsWanted);
 
-    *roomList = calloc(roomsWanted, sizeof(struct rooms));
-    if(*roomList == NULL){
-        fprintf(stderr, "error allocating memory for list");
-        exit(1);
-    }
-    roomNumber = roomsWanted;
+    d->roomList = calloc(d->numRooms, sizeof(room));
 
-    for(i = 0; i < roomsWanted; i++){
-        //printf("cX: %d, cY: %d, sX: %d, sY %d\n\n", tempCornerX, tempCornerY, tempSizeX, tempSizeY);
-        fread(&roomList[i]->cornerX, 1, 1, f);
-        fread(&roomList[i]->cornerY, 1, 1, f);
-        fread(&roomList[i]->sizeX, 1, 1, f);
-        fread(&roomList[i]->sizeY, 1, 1, f);
+    for(i = 0; i < d->numRooms; i++){
+        fread(&d->roomList[i].cornerX, 1, 1, f);
+        fread(&d->roomList[i].cornerY, 1, 1, f);
+        fread(&d->roomList[i].sizeX, 1, 1, f);
+        fread(&d->roomList[i].sizeY, 1, 1, f);
    
-        for (j = 0; j < roomList[i]->sizeY; j++) {
-            for (k = 0; k < roomList[i]->sizeX; k++) {
-                if(floor[roomList[i]->cornerY + j][roomList[i]->cornerX + k].type != playerChar){
-                    floor[roomList[i]->cornerY + j][roomList[i]->cornerX + k].type = roomChar;
+        for (j = 0; j < d->roomList[i].sizeY; j++) {
+            for (k = 0; k < d->roomList[i].sizeX; k++) {
+                if(d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k].type != playerChar){
+                    d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k].type = roomChar;
                 }
             }
         }
@@ -483,40 +474,44 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms **
     // Number of up stairs
     int16_t upNum;
     fread(&upNum, 2, 1, f);
-    upNum = be16toh(upNum);
+    d->numUStairs = be16toh(upNum);
+
+    d->stairListU = calloc(d->numUStairs, sizeof(stair));
     
     // Location of up stairs
-    for(i = 0; i < upNum; i++) {
-        fread(&stairListU[i].x, 1, 1, f);
-        fread(&stairListU[i].y, 1, 1, f);
-        floor[stairListU[i].y][stairListU[i].x].type = upChar;
+    for(i = 0; i < d->numUStairs; i++) {
+        fread(&d->stairListU[i].x, 1, 1, f); // BUG
+        fread(&d->stairListU[i].y, 1, 1, f);
+        d->floor[d->stairListU[i].y][d->stairListU[i].x].type = upChar;
     }
 
     // Number of down stairs
     int16_t downNum;
     fread(&downNum, 2, 1, f);
-    downNum = be16toh(downNum);
+    d->numDStairs = be16toh(downNum);
+
+    d->stairListD = calloc(d->numDStairs, sizeof(stair));
 
     // Location of down stairs
-    for(i = 0; i < downNum; i++) {
-        fread(&stairListD[i].x, 1, 1, f);
-        fread(&stairListD[i].y, 1, 1, f);
-        floor[stairListD[i].y][stairListD[i].x].type = downChar;
+    for(i = 0; i < d->numDStairs; i++) {
+        fread(&d->stairListD[i].x, 1, 1, f);
+        fread(&d->stairListD[i].y, 1, 1, f);
+        d->floor[d->stairListD[i].y][d->stairListD[i].x].type = downChar;
     }
     
-    printGame(floor);
+    printGame(d);
     fclose(f);
 }
 
 /*****************************************
  *            Game Printer               *
  *****************************************/
-void printGame(struct tiles floor[floorMaxY][floorMaxX])
+void printGame(dungeon *d)
 {
     int i, j;
     for(i = 0; i < floorMaxY; i++){ 
         for(j = 0; j < floorMaxX; j++){
-            switch(floor[i][j].type) {
+            switch(d->floor[i][j].type) {
                 case edgeChar :
                     printf("%c", edgeChar);
                     break;
@@ -544,4 +539,11 @@ void printGame(struct tiles floor[floorMaxY][floorMaxX])
         }
         printf("\n");
     }
+}
+
+void dungeonDelete(dungeon d)
+{
+    free(d.roomList);
+    free(d.stairListU);
+    free(d.stairListD);
 }
