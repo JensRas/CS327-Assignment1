@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
         for(i = 1; i < argc; i++){
             if(!strcmp(argv[i], "--load")){
                 //printf("pass");
-                if(!(f = fopen(findFilePath(), "rb"))){
+                if(!(f = fopen("/home/Thomas McCoy/COM327-HW/CS327-Assignment1/samples/00.rlg327", "rb"))){
                     fprintf(stderr, "Failed to open file for reading");
                     return -1;
                 }
@@ -409,7 +409,6 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *r
  *****************************************/
 void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms **roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player)
 {
-    //free(roomList);
     // Semantic file-type marker
     char semantic[13];
     semantic[12] = '\0';
@@ -453,7 +452,11 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms **
     fread(&roomsWanted, 2, 1, f);
     roomsWanted = be16toh(roomsWanted);
 
-    *roomList = malloc(roomsWanted * sizeof(*roomList));
+    *roomList = calloc(roomsWanted, sizeof(struct rooms));
+    if(*roomList == NULL){
+        fprintf(stderr, "error allocating memory for list");
+        exit(1);
+    }
     roomNumber = roomsWanted;
 
     for(i = 0; i < roomsWanted; i++){
@@ -464,17 +467,14 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms **
         fread(&roomList[i]->sizeY, 1, 1, f);
    
         for (j = 0; j < roomList[i]->sizeY; j++) {
-            printf("j: %d\n", j);
             for (k = 0; k < roomList[i]->sizeX; k++) {
-                printf("k: %d\n", k);
                 if(floor[roomList[i]->cornerY + j][roomList[i]->cornerX + k].type != playerChar){
                     floor[roomList[i]->cornerY + j][roomList[i]->cornerX + k].type = roomChar;
-                    printf("size1: %d, size2: %d\n", roomList[i]->cornerY + j, roomList[i]->cornerX + k);
                 }
             }
         }
     }
-    
+
     // Number of up stairs
     int16_t upNum;
     fread(&upNum, 2, 1, f);
