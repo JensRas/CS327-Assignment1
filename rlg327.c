@@ -327,19 +327,19 @@ void playerGen(dungeon *d) {
  *****************************************/
 char *findFilePath()
 {
-    //char *home = getenv("HOME"); // Final game & Thomas'
+    char *home = getenv("HOME"); // Final game & Thomas'
     char *gameDir = ".rlg327"; // Final game
     char *saveFile = "dungeon"; // Final game
-    //char *path = malloc((strlen(home) + strlen(gameDir) + strlen(saveFile) + 2 + 1)); // Final game
-    //sprintf(path, "%s/%s/%s", home, gameDir, saveFile); // Final game
+    char *path = malloc((strlen(home) + strlen(gameDir) + strlen(saveFile) + 2 + 1)); // Final game
+    sprintf(path, "%s/%s/%s", home, gameDir, saveFile); // Final game
 
     //char *thomas = "COM327-HW/CS327-Assignment1"; // Thomas'
     //char *path = malloc((strlen(home) + strlen(thomas) + strlen(gameDir) + strlen(saveFile) + 3 + 1) * sizeof(char)); // Thomas'
     //sprintf(path, "%s/%s/%s/%s", home, thomas, gameDir, saveFile); // Thomas'
 
-    char *jens = "/cygdrive/u/spring2021/COMS 327/Homework 1.02/CS327-Assignment1"; // Jens'
-    char *path = malloc((strlen(jens) + strlen(gameDir) + strlen(saveFile) + 2 + 1)); // Jens'
-    sprintf(path, "%s/%s/%s", jens, gameDir, saveFile); // Jens'
+    //char *jens = "/cygdrive/u/spring2021/COMS 327/Homework 1.02/CS327-Assignment1"; // Jens'
+    //char *path = malloc((strlen(jens) + strlen(gameDir) + strlen(saveFile) + 2 + 1)); // Jens'
+    //sprintf(path, "%s/%s/%s", jens, gameDir, saveFile); // Jens'
 
     return path;
 }
