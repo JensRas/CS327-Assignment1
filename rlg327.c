@@ -64,7 +64,7 @@ void staircaseGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomLi
 void playerGen(struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct pc *player, int16_t roomsWanted);
 char *findFilePath();
 void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc player);
-void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player);
+void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms **roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player);
 void printGame(struct tiles floor[floorMaxY][floorMaxX]);
 
 //Make dungeon struct
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
                     return -1;
                 }
                 
-                loadGame(f, floor, roomList, stairListU, stairListD, &player);
+                loadGame(f, floor, &roomList, stairListU, stairListD, &player);
                 gameLoaded = true;
                 break;
             }
@@ -407,7 +407,7 @@ void saveGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *r
 /*****************************************
  *            Game Loader                *
  *****************************************/
-void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player)
+void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms **roomList, struct stairs stairListU[maxStairNum], struct stairs stairListD[maxStairNum], struct pc *player)
 {
     //free(roomList);
     // Semantic file-type marker
@@ -453,20 +453,23 @@ void loadGame(FILE *f, struct tiles floor[floorMaxY][floorMaxX], struct rooms *r
     fread(&roomsWanted, 2, 1, f);
     roomsWanted = be16toh(roomsWanted);
 
-    roomList = malloc(roomList, roomsWanted * sizeof(*roomList));
+    *roomList = malloc(roomsWanted * sizeof(*roomList));
     roomNumber = roomsWanted;
 
     for(i = 0; i < roomsWanted; i++){
         //printf("cX: %d, cY: %d, sX: %d, sY %d\n\n", tempCornerX, tempCornerY, tempSizeX, tempSizeY);
-        fread(&roomList[i].cornerX, 1, 1, f);
-        fread(&roomList[i].cornerY, 1, 1, f);
-        fread(&roomList[i].sizeX, 1, 1, f);
-        fread(&roomList[i].sizeY, 1, 1, f);
+        fread(&roomList[i]->cornerX, 1, 1, f);
+        fread(&roomList[i]->cornerY, 1, 1, f);
+        fread(&roomList[i]->sizeX, 1, 1, f);
+        fread(&roomList[i]->sizeY, 1, 1, f);
    
-        for (j = 0; j < roomList[i].sizeY; j++) {
-            for (k = 0; k < roomList[i].sizeX; k++) {
-                if(floor[roomList[i].cornerY + j][roomList[i].cornerX + k].type != playerChar){
-                    floor[roomList[i].cornerY + j][roomList[i].cornerX + k].type = roomChar;
+        for (j = 0; j < roomList[i]->sizeY; j++) {
+            printf("j: %d\n", j);
+            for (k = 0; k < roomList[i]->sizeX; k++) {
+                printf("k: %d\n", k);
+                if(floor[roomList[i]->cornerY + j][roomList[i]->cornerX + k].type != playerChar){
+                    floor[roomList[i]->cornerY + j][roomList[i]->cornerX + k].type = roomChar;
+                    printf("size1: %d, size2: %d\n", roomList[i]->cornerY + j, roomList[i]->cornerX + k);
                 }
             }
         }
