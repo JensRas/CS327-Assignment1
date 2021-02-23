@@ -8,6 +8,7 @@
 #include <time.h>
 #include <endian.h>
 #include <stdint.h>
+#include "heap.h"
 
 #define minRoomNumber 6
 #define maxRoomNumber 10
@@ -27,7 +28,9 @@
 
 typedef struct tile {
     uint8_t hardness;
-    char type; // Unsigned?
+    uint8_t nonTunDist;
+    uint8_t tunDist;
+    char type;
 } tile;
 
 typedef struct room {
@@ -58,6 +61,19 @@ typedef struct dungeon {
     int16_t numDStairs;
 } dungeon; 
 
+struct Graph {
+    struct Node* head[N];
+};
+
+struct Node {
+    int dest;
+    struct Node* next;
+};
+
+struct Edge {
+    int src, dest;
+}
+
 /*****************************************
  *             Prototypes                *
  *****************************************/
@@ -68,6 +84,9 @@ void borderGen(dungeon *d);
 void roomGen(dungeon *d);
 void staircaseGen(dungeon *d);
 void playerGen(dungeon *d);
+void Dijkstra(Graph, source);
+void nonTunPF();
+void tunPF();
 char *findFilePath();
 void saveGame(FILE *f, dungeon d);
 void loadGame(FILE *f, dungeon *d);
@@ -322,8 +341,186 @@ void playerGen(dungeon *d) {
     }
 }
 
+
+struct Graph* createGraph(struct Edge edges[], int n)
+{
+    unsigned i;
+ 
+    // allocate storage for the graph data structure
+    struct Graph* graph = (struct Graph*)malloc(sizeof(struct Graph));
+ 
+    // initialize head pointer for all vertices
+    for (i = 0; i < N; i++) {
+        graph->head[i] = NULL;
+    }
+ 
+    // add edges to the directed graph one by one
+    for (i = 0; i < n; i++)
+    {
+        // get the source and destination vertex
+        int src = edges[i].src;
+        int dest = edges[i].dest;
+ 
+        // allocate a new node of adjacency list from `src` to `dest`
+        struct Node* newNode = (struct Node*)malloc(sizeof(struct Node));
+        newNode->dest = dest;
+ 
+        // point new node to the current head
+        newNode->next = graph->head[src];
+ 
+        // point head pointer to the new node
+        graph->head[src] = newNode;
+    }
+ 
+    return graph;
+}
+
+// Priority queue
+// Two pathfinding algorithms (Dijkstra's treating each cell in the dungeon as a node in a graph with 8-way connectivity)
+// Non-tunneling
+// - Floor (and stairs) are weight 1
+// - Ignore wall cells
+// Tunneling
+// - Hardness of 0 are weight 1
+// - Hardness [1, 254] are weight 1 + (hardness/85)
+// - Hardness of 255 has infinite weight (not in the queue)
+// Two distance maps (non-tunneling and tunneling) of the distance from PC
+
 /*****************************************
- *          File Path Finder             *
+ *         Dijkstra's Algorithm          *
+ *****************************************/
+void Dijkstra(Graph, source) 
+{
+    dist[source] = 0                         // Initialization
+
+    create vertex priority queue Q
+
+    for (v; v < graph size; v++) {           //each vertex v in Graph:          
+        if (v != source){
+            dist[v] = INTMAX_MAX;            // Unknown distance from source to v // Cost set to infinity
+            prev[v] = 0;                     // Predecessor of v // Set cost to 0
+        }
+        Q.add_with_priority(v, dist[v])
+    }
+
+    while (Q is not empty){                  // The main loop
+        u = Q.extract_min()                  // Remove and return best vertex
+        for (){                              // each neighbor v of u:     // only v that are still in Q
+            alt = dist[u] + length(u, v)
+            if (alt < dist[v]){
+                dist[v] = alt;
+                prev[v] = u;
+                Q.decrease_priority(v, alt)
+            }
+        }  
+    }
+    return dist, prev
+    // From Sheaffer's code : 
+    static void dijkstra_corridor(dungeon_t *d, pair_t from, pair_t to) // take param of graoh instead of dungeon?
+    {
+        static corridor_path_t d->floor[DUNGEON_Y][DUNGEON_X], *p;
+        static uint32_t initialized = 0;
+        heap_t h;
+        uint32_t x, y;
+
+        if (!initialized) {
+            for (y = 0; y < DUNGEON_Y; y++) {
+                for (x = 0; x < DUNGEON_X; x++) {
+                    d->floor[y][x].pos[dim_y] = y;
+                    d->floor[y][x].pos[dim_x] = x;
+                }
+            }
+            initialized = 1;
+        }
+  
+        for (y = 0; y < DUNGEON_Y; y++) {
+            for (x = 0; x < DUNGEON_X; x++) {
+                d->floor[y][x].cost = INT_MAX;
+            }
+        }
+
+        d->floor[from[dim_y]][from[dim_x]].cost = 0;
+
+        heap_init(&h, corridor_path_cmp, NULL);
+
+        for (y = 0; y < DUNGEON_Y; y++) {
+            for (x = 0; x < DUNGEON_X; x++) {
+                if (mapxy(x, y) != ter_wall_immutable) {
+                    d->floor[y][x].hn = heap_insert(&h, &d->floor[y][x]);
+                } else {
+                    d->floor[y][x].hn = NULL;
+                }
+            }
+        }
+
+        while ((p = heap_remove_min(&h))) {
+            p->hn = NULL;
+
+            /* if ((p->pos[dim_y] == to[dim_y]) && p->pos[dim_x] == to[dim_x]) {
+                for (x = to[dim_x], y = to[dim_y]; (x != from[dim_x]) || (y != from[dim_y]); p = &d->floor[y][x], x = p->from[dim_x], y = p->from[dim_y]) {
+                    if (mapxy(x, y) != ter_floor_room) {
+                        mapxy(x, y) = ter_floor_hall;
+                        hardnessxy(x, y) = 0;
+                    }
+                }
+                heap_delete(&h);
+                return;
+            } */
+
+            if ((d->floor[p->pos[dim_y] - 1][p->pos[dim_x]    ].hn) &&
+                (d->floor[p->pos[dim_y] - 1][p->pos[dim_x]    ].cost >
+                 p->cost + hardnesspair(p->pos))) {
+                d->floor[p->pos[dim_y] - 1][p->pos[dim_x]    ].cost = p->cost + hardnesspair(p->pos);
+                d->floor[p->pos[dim_y] - 1][p->pos[dim_x]    ].from[dim_y] = p->pos[dim_y];
+                d->floor[p->pos[dim_y] - 1][p->pos[dim_x]    ].from[dim_x] = p->pos[dim_x];
+                heap_decrease_key_no_replace(&h, path[p->pos[dim_y] - 1]p->pos[dim_x]    ].hn);
+            }
+            if ((d->floor[p->pos[dim_y]    ][p->pos[dim_x] - 1].hn) &&
+                (d->floor[p->pos[dim_y]    ][p->pos[dim_x] - 1].cost >
+                 p->cost + hardnesspair(p->pos))) {
+                d->floor[p->pos[dim_y]    ][p->pos[dim_x] - 1].cost = p->cost + hardnesspair(p->pos);
+                d->floor[p->pos[dim_y]    ][p->pos[dim_x] - 1].from[dim_y] = p->pos[dim_y];
+                d->floor[p->pos[dim_y]    ][p->pos[dim_x] - 1].from[dim_x] = p->pos[dim_x];
+                heap_decrease_key_no_replace(&h, path[p->pos[dim_y]    ][p->pos[dim_x] - 1].hn);
+            }
+            if ((d->floor[p->pos[dim_y]    ][p->pos[dim_x] + 1].hn) &&
+                (d->floor[p->pos[dim_y]    ][p->pos[dim_x] + 1].cost >
+                 p->cost + hardnesspair(p->pos))) {
+                d->floor[p->pos[dim_y]    ][p->pos[dim_x] + 1].cost = p->cost + hardnesspair(p->pos);
+                d->floor[p->pos[dim_y]    ][p->pos[dim_x] + 1].from[dim_y] = p->pos[dim_y];
+                d->floor[p->pos[dim_y]    ][p->pos[dim_x] + 1].from[dim_x] = p->pos[dim_x];
+                heap_decrease_key_no_replace(&h, path[p->pos[dim_y]    ][p->pos[dim_x] + 1].hn);
+            }
+            if ((d->floor[p->pos[dim_y] + 1][p->pos[dim_x]    ].hn) &&
+                (d->floor[p->pos[dim_y] + 1][p->pos[dim_x]    ].cost >
+                p->cost + hardnesspair(p->pos))) {
+                d->floor[p->pos[dim_y] + 1][p->pos[dim_x]    ].cost = p->cost + hardnesspair(p->pos);
+                d->floor[p->pos[dim_y] + 1][p->pos[dim_x]    ].from[dim_y] = p->pos[dim_y];
+                d->floor[p->pos[dim_y] + 1][p->pos[dim_x]    ].from[dim_x] = p->pos[dim_x];
+                heap_decrease_key_no_replace(&h, path[p->pos[dim_y] + 1][p->pos[dim_x]    ].hn);
+            }
+        }
+    }
+}
+
+/*****************************************
+ *          Non-tunneling Graph          *
+ *****************************************/
+void nonTunGraph()
+{
+    
+}
+
+/*****************************************
+ *            Tunneling Graph            *
+ *****************************************/
+void tunGraph() 
+{
+    
+}
+
+/*****************************************
+ *           File Path Finder            *
  *****************************************/
 char *findFilePath()
 {
@@ -541,6 +738,49 @@ void printGame(dungeon *d)
     }
 }
 
+/*****************************************
+ *             Map Printer               *
+ *****************************************/
+void printMap(dungeon *d, char maptype[]) 
+{
+    int i, j;
+    // Print distance maps
+    if(!strcmp(maptype, "tunneler")){
+        for(i = 0; i < floorMaxY; i++){
+            for(j = 0; j < floorMaxX; j++){
+                if(d->floor[i][j].tunDist != -1 || d->floor[i][j].type != playerChar){ // Distance from Player
+                    printf("%d ", d->floor[i][j].tunDist % 10);
+                } else if(d->floor[i][j].type == edgeChar) { // Border
+                    printf("%c ", edgeChar);
+                } else if(d->floor[i][j].type == playerChar) { // Player
+                    printf("%c ", playerChar);
+                } else { 
+                    printf(" "); // Rooms
+                }
+            }
+            printf("\n");
+        }
+    } else { 
+        for(i = 0; i < floorMaxY; i++){
+            for(j = 0; j < floorMaxX; j++){
+                if(d->floor[i][j].type != playerChar){ // Distance from Player
+                    printf("%d ", d->floor[i][j].nonTunDist % 10);
+                } else if(d->floor[i][j].type == edgeChar) { // Border
+                    printf("%c ", edgeChar);
+                } else if(d->floor[i][j].type == playerChar) { // Player
+                    printf("%c ", playerChar);
+                } else { 
+                    printf("E"); // Error
+                }
+            }
+            printf("\n");
+        }
+    } 
+}
+
+/*****************************************
+ *           Dungeon Deletor             *
+ *****************************************/
 void dungeonDelete(dungeon d)
 {
     free(d.roomList);
