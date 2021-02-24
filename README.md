@@ -8,16 +8,13 @@ COM 327 - Advanced Programming @ Iowa State University - Assignment 1 - Roguelik
 
 ## Getting Started
 
-Border - '#'
-Room - ' '
-Corridor - 'o'
-Rock - '.'
-Up Stairs - '<'
-Down Stairs - '>'
+* Via Release: Download latest release and unzip twice.
+* Via Cloning: Clone via gitbash/github desktop.
 
 ## Running the tests
 
-Simply compile the program using gcc -Wall assignment1.c -o assignment1 and run using ./assignment1 or use the Makefile.
+Simply compile the program using the Makefile and run using ./rlg327 with optional switches of --load and --save
+Use gdb rlg327 to debug using gdb. 
 
 ## Authors
 
