@@ -13,8 +13,7 @@ COM 327 - Advanced Programming @ Iowa State University - Assignment 1 - Roguelik
 
 ## Running the tests
 
-Simply compile the program using the Makefile and run using ./rlg327 with optional switches of --load and --save
-Use gdb rlg327 to debug using gdb. 
+Simply compile the program using the Makefile and run using ./rlg327 with optional switches of --load and --save. Use gdb rlg327 to debug using gdb. 
 
 ## Authors
 
