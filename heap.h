@@ -17,9 +17,7 @@ typedef struct heap {
   void (*datum_delete)(void *);
 } heap_t;
 
-void heap_init(heap_t *h,
-               int32_t (*compare)(const void *key, const void *with),
-               void (*datum_delete)(void *));
+void heap_init(heap_t *h, int32_t (*compare)(const void *key, const void *with), void (*datum_delete)(void *));
 void heap_delete(heap_t *h);
 heap_node_t *heap_insert(heap_t *h, void *v);
 void *heap_peek_min(heap_t *h);

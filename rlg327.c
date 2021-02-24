@@ -8,30 +8,34 @@
 #include <time.h>
 #include <endian.h>
 #include <stdint.h>
+#include <limits.h>
+
 #include "heap.h"
+#include "heap.c"
 
-#define minRoomNumber 6
+#define minRoomNumber  6
 #define maxRoomNumber 10
-#define maxStairNum 3       // Arbitrary value that can be changed
-#define maxRoomSize 10      // Arbitrary value that can be changed
-#define minRoomX 4
-#define minRoomY 3
-#define floorMaxX 80
-#define floorMaxY 21
-#define edgeChar '#'        //Hardness = 255
-#define roomChar ' '        //Hardness = 0
-#define corridorChar 'o'    //Hardness = 0
-#define rockChar '.'        //Hardness = 100 (Non-zero, non-255)
-#define upChar '<'          //Hardness = 0
-#define downChar '>'        //Hardness = 0
-#define playerChar '@'      
+#define maxStairNum    3        // Arbitrary value that can be changed
+#define maxRoomSize   10        // Arbitrary value that can be changed
+#define minRoomX       4
+#define minRoomY       3
+#define floorMaxX     80
+#define floorMaxY     21
+#define edgeChar     '#'        //Hardness = 255
+#define roomChar     ' '        //Hardness = 0
+#define corridorChar 'o'        //Hardness = 0
+#define rockChar     '.'        //Hardness = 100 (Non-zero, non-255)
+#define upChar       '<'        //Hardness = 0
+#define downChar     '>'        //Hardness = 0
+#define playerChar   '@'
+#define dimY          0
+#define dimX          1      
 
-typedef struct tile {
-    uint8_t hardness;
-    uint8_t nonTunDist;
-    uint8_t tunDist;
-    char type;
-} tile;
+typedef struct corPath {
+  heap_node_t *hn;
+  uint8_t pos[2];
+  int32_t cost;
+} corPath;
 
 typedef struct room {
     int8_t cornerX;     // Top left corner
@@ -51,7 +55,11 @@ typedef struct stair {
 } stair;
 
 typedef struct dungeon {
-    tile floor[floorMaxY][floorMaxX];
+    corPath path[floorMaxY][floorMaxX];
+    char floor[floorMaxY][floorMaxX];
+    uint8_t hardness[floorMaxY][floorMaxX];
+    uint8_t nonTunDist[floorMaxY][floorMaxX];
+    uint8_t tunDist[floorMaxY][floorMaxX];
     room *roomList;
     stair *stairListU;
     stair *stairListD;
@@ -60,19 +68,6 @@ typedef struct dungeon {
     int16_t numUStairs;
     int16_t numDStairs;
 } dungeon; 
-
-struct Graph {
-    struct Node* head[N];
-};
-
-struct Node {
-    int dest;
-    struct Node* next;
-};
-
-struct Edge {
-    int src, dest;
-}
 
 /*****************************************
  *             Prototypes                *
@@ -84,13 +79,12 @@ void borderGen(dungeon *d);
 void roomGen(dungeon *d);
 void staircaseGen(dungeon *d);
 void playerGen(dungeon *d);
-void Dijkstra(Graph, source);
-void nonTunPF();
-void tunPF();
+void dijkstra(dungeon *d, char str[]);
 char *findFilePath();
 void saveGame(FILE *f, dungeon d);
 void loadGame(FILE *f, dungeon *d);
 void printGame(dungeon *d);
+void printMap(dungeon *d);
 void dungeonDelete(dungeon d);
 
 /*****************************************
@@ -108,7 +102,6 @@ int main(int argc, char *argv[])
     FILE *f;
 
     //printf("%s\n", findFilePath());
-
     if(argc >= 2){
         for(i = 1; i < argc; i++){
             if(!strcmp(argv[i], "--load")){
@@ -127,6 +120,9 @@ int main(int argc, char *argv[])
         gameGen(&d);
     }
     
+    dijkstra(&d, "non-tunneling");
+    dijkstra(&d, "tunneling");
+
     if(argc >= 2){
         for(i = 1; i < argc; i++){
             if(!strcmp(argv[i], "--save")){
@@ -175,16 +171,16 @@ void borderGen(dungeon *d)
 {
     int i, j;
     for(i = 0; i < floorMaxY; i++){ // Sides
-        d->floor[i][0].type = edgeChar;
-        d->floor[i][0].hardness = 255;
-        d->floor[i][floorMaxX - 1].type = edgeChar;
-        d->floor[i][floorMaxX- 1].hardness = 255;
+        d->floor[i][0] = edgeChar;
+        d->hardness[i][0] = 255;
+        d->floor[i][floorMaxX - 1] = edgeChar;
+        d->hardness[i][floorMaxX - 1] = 255;
     }
     for(j = 0; j < floorMaxX; j++){ // Top/Bottom
-        d->floor[0][j].type = edgeChar;
-        d->floor[0][j].hardness = 255;
-        d->floor[floorMaxY - 1][j].type = edgeChar;
-        d->floor[floorMaxY - 1][j].hardness = 255;
+        d->floor[0][j] = edgeChar;
+        d->hardness[0][j] = 255;
+        d->floor[floorMaxY - 1][j] = edgeChar;
+        d->hardness[floorMaxY - 1][j] = 255;
     }
 }
 
@@ -211,31 +207,31 @@ void corridorGen(dungeon *d)
         for(j = 0; j < abs(ranY - ranY2); j++){
             if(ranY < ranY2){
                 l++;
-                if(d->floor[ranY + j][ranX].type != roomChar){
-                    d->floor[ranY + j][ranX].type = corridorChar;
-                    d->floor[ranY + j][ranX].hardness = 0;
+                if(d->floor[ranY + j][ranX] != roomChar){
+                    d->floor[ranY + j][ranX] = corridorChar;
+                    d->hardness[ranY + j][ranX] = 0;
                 }
             }
             else{
                 l--;
-                if(d->floor[ranY - j][ranX].type != roomChar){
-                    d->floor[ranY - j][ranX].type = corridorChar;
-                    d->floor[ranY - j][ranX].hardness = 0;
+                if(d->floor[ranY - j][ranX] != roomChar){
+                    d->floor[ranY - j][ranX] = corridorChar;
+                    d->hardness[ranY - j][ranX] = 0;
                 }
             }
         }
 
         for(k = 0; k < abs(ranX - ranX2); k++){
             if(ranX < ranX2){
-                if(d->floor[ranY + l][ranX + k].type != roomChar){
-                    d->floor[ranY + l][ranX + k].type = corridorChar;
-                    d->floor[ranY + l][ranX + k].hardness = 0;
+                if(d->floor[ranY + l][ranX + k] != roomChar){
+                    d->floor[ranY + l][ranX + k] = corridorChar;
+                    d->hardness[ranY + l][ranX + k] = 0;
                 }
             }
             else {
-                if(d->floor[ranY + l][ranX - k].type != roomChar){
-                    d->floor[ranY + l][ranX - k].type = corridorChar;
-                    d->floor[ranY + l][ranX - k].hardness = 0;
+                if(d->floor[ranY + l][ranX - k] != roomChar){
+                    d->floor[ranY + l][ranX - k] = corridorChar;
+                    d->hardness[ranY + l][ranX - k] = 0;
                 }
             }
         }
@@ -255,8 +251,8 @@ void roomGen(dungeon *d)
         // Set everything (not border) to rock
         for(i = 1; i < floorMaxY - 1; i++) { 
             for (j = 1; j < floorMaxX - 1; j++) {
-                d->floor[i][j].type = rockChar;
-                d->floor[i][j].hardness = 100;
+                d->floor[i][j] = rockChar;
+                d->hardness[i][j] = 100;
             }
         }
         
@@ -268,8 +264,8 @@ void roomGen(dungeon *d)
 
             for (j = -1; j < d->roomList[i].sizeY + 1; j++) {
                 for (k = -1; k < d->roomList[i].sizeX + 1; k++) {
-                    if(d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k].type == roomChar || 
-                        d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k].type == edgeChar){
+                    if(d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k] == roomChar || 
+                        d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k] == edgeChar){
                         placedAll = false;
                     }
                 }
@@ -277,8 +273,8 @@ void roomGen(dungeon *d)
             if(placedAll){
                 for (j = 0; j < d->roomList[i].sizeY; j++) {
                     for (k = 0; k < d->roomList[i].sizeX; k++) {
-                        d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k].type = roomChar;
-                        d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k].hardness = 0;
+                        d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k] = roomChar;
+                        d->hardness[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k] = 0;
                     }
                 }
             }
@@ -304,7 +300,7 @@ void staircaseGen(dungeon *d)
         d->stairListU[i].y = ranY;
         d->stairListU[i].x = ranX;
 
-        d->floor[ranY][ranX].type = upChar;
+        d->floor[ranY][ranX] = upChar;
     }
     // Down staircases
     for(i = 0; i < d->numDStairs; i++){
@@ -316,7 +312,7 @@ void staircaseGen(dungeon *d)
         d->stairListD[i].y = ranY;
         d->stairListD[i].x = ranX;
 
-        d->floor[ranY][ranX].type = downChar;
+        d->floor[ranY][ranX] = downChar;
     }
 }
 
@@ -332,47 +328,13 @@ void playerGen(dungeon *d) {
         ranY = d->roomList[ran].cornerY + (rand() % d->roomList[ran].sizeY);
         ranX = d->roomList[ran].cornerX + (rand() % d->roomList[ran].sizeX);
         
-        if(d->floor[ranY][ranX].type != upChar && d->floor[ranY][ranX].type != downChar){
+        if(d->floor[ranY][ranX] != upChar && d->floor[ranY][ranX] != downChar){
             d->player.y = ranY;
             d->player.x = ranX;
-            d->floor[d->player.y][d->player.x].type = playerChar;
+            d->floor[d->player.y][d->player.x] = playerChar;
             placed = true;
         }
     }
-}
-
-
-struct Graph* createGraph(struct Edge edges[], int n)
-{
-    unsigned i;
- 
-    // allocate storage for the graph data structure
-    struct Graph* graph = (struct Graph*)malloc(sizeof(struct Graph));
- 
-    // initialize head pointer for all vertices
-    for (i = 0; i < N; i++) {
-        graph->head[i] = NULL;
-    }
- 
-    // add edges to the directed graph one by one
-    for (i = 0; i < n; i++)
-    {
-        // get the source and destination vertex
-        int src = edges[i].src;
-        int dest = edges[i].dest;
- 
-        // allocate a new node of adjacency list from `src` to `dest`
-        struct Node* newNode = (struct Node*)malloc(sizeof(struct Node));
-        newNode->dest = dest;
- 
-        // point new node to the current head
-        newNode->next = graph->head[src];
- 
-        // point head pointer to the new node
-        graph->head[src] = newNode;
-    }
- 
-    return graph;
 }
 
 // Priority queue
@@ -387,137 +349,123 @@ struct Graph* createGraph(struct Edge edges[], int n)
 // Two distance maps (non-tunneling and tunneling) of the distance from PC
 
 /*****************************************
- *         Dijkstra's Algorithm          *
+ *        Corridor Path Compare          *
  *****************************************/
-void Dijkstra(Graph, source) 
+static int32_t corridor_path_cmp(const void *key, const void *with) 
 {
-    dist[source] = 0                         // Initialization
+    return ((corPath *) key)->cost - ((corPath *) with)->cost;
+}
 
-    create vertex priority queue Q
+/*****************************************
+ *         Dungeon Cost Finder           *
+ *****************************************/
+void dijkstra(dungeon *d, char str[]) 
+{
+    static corPath *p;
+    static uint32_t initialized = 0;
+    heap_t h;
+    uint32_t x, y;
 
-    for (v; v < graph size; v++) {           //each vertex v in Graph:          
-        if (v != source){
-            dist[v] = INTMAX_MAX;            // Unknown distance from source to v // Cost set to infinity
-            prev[v] = 0;                     // Predecessor of v // Set cost to 0
+    if (!initialized) {
+        for (y = 0; y < floorMaxY; y++) {
+            for (x = 0; x < floorMaxX; x++) {
+                d->path[y][x].pos[dimY] = y;
+                d->path[y][x].pos[dimX] = x;
+            }
         }
-        Q.add_with_priority(v, dist[v])
+        initialized = 1;
     }
 
-    while (Q is not empty){                  // The main loop
-        u = Q.extract_min()                  // Remove and return best vertex
-        for (){                              // each neighbor v of u:     // only v that are still in Q
-            alt = dist[u] + length(u, v)
-            if (alt < dist[v]){
-                dist[v] = alt;
-                prev[v] = u;
-                Q.decrease_priority(v, alt)
-            }
-        }  
+    for (y = 0; y < floorMaxY; y++) {
+        for (x = 0; x < floorMaxX; x++) {
+            d->path[y][x].cost = INT_MAX;
+        }
     }
-    return dist, prev
-    // From Sheaffer's code : 
-    static void dijkstra_corridor(dungeon_t *d, pair_t from, pair_t to) // take param of graoh instead of dungeon?
-    {
-        static corridor_path_t d->floor[DUNGEON_Y][DUNGEON_X], *p;
-        static uint32_t initialized = 0;
-        heap_t h;
-        uint32_t x, y;
 
-        if (!initialized) {
-            for (y = 0; y < DUNGEON_Y; y++) {
-                for (x = 0; x < DUNGEON_X; x++) {
-                    d->floor[y][x].pos[dim_y] = y;
-                    d->floor[y][x].pos[dim_x] = x;
-                }
-            }
-            initialized = 1;
-        }
-  
-        for (y = 0; y < DUNGEON_Y; y++) {
-            for (x = 0; x < DUNGEON_X; x++) {
-                d->floor[y][x].cost = INT_MAX;
-            }
-        }
+    d->path[d->player.y][d->player.x].cost = 0; 
 
-        d->floor[from[dim_y]][from[dim_x]].cost = 0;
-
-        heap_init(&h, corridor_path_cmp, NULL);
-
-        for (y = 0; y < DUNGEON_Y; y++) {
-            for (x = 0; x < DUNGEON_X; x++) {
-                if (mapxy(x, y) != ter_wall_immutable) {
-                    d->floor[y][x].hn = heap_insert(&h, &d->floor[y][x]);
+    heap_init(&h, corridor_path_cmp, NULL); 
+    
+    if(!strcmp(str, "non-tunneling")){
+        for (y = 0; y < floorMaxY; y++) {
+            for (x = 0; x < floorMaxX; x++) {
+                if (d->floor[y][x] != edgeChar && d->floor[y][x] != rockChar) {
+                    d->path[y][x].hn = heap_insert(&h, &d->path[y][x]);
                 } else {
-                    d->floor[y][x].hn = NULL;
+                    d->path[y][x].hn = NULL;
                 }
             }
         }
-
-        while ((p = heap_remove_min(&h))) {
-            p->hn = NULL;
-
-            /* if ((p->pos[dim_y] == to[dim_y]) && p->pos[dim_x] == to[dim_x]) {
-                for (x = to[dim_x], y = to[dim_y]; (x != from[dim_x]) || (y != from[dim_y]); p = &d->floor[y][x], x = p->from[dim_x], y = p->from[dim_y]) {
-                    if (mapxy(x, y) != ter_floor_room) {
-                        mapxy(x, y) = ter_floor_hall;
-                        hardnessxy(x, y) = 0;
-                    }
+    } else if(!strcmp(str, "tunneling")){
+        for (y = 0; y < floorMaxY; y++) {
+            for (x = 0; x < floorMaxX; x++) {
+                if (d->floor[y][x] != edgeChar) {
+                    d->path[y][x].hn = heap_insert(&h, &d->path[y][x]);
+                } else {
+                    d->path[y][x].hn = NULL;
                 }
-                heap_delete(&h);
-                return;
-            } */
+            }
+        }
+    } else {
+        exit(1);
+    }
 
-            if ((d->floor[p->pos[dim_y] - 1][p->pos[dim_x]    ].hn) &&
-                (d->floor[p->pos[dim_y] - 1][p->pos[dim_x]    ].cost >
-                 p->cost + hardnesspair(p->pos))) {
-                d->floor[p->pos[dim_y] - 1][p->pos[dim_x]    ].cost = p->cost + hardnesspair(p->pos);
-                d->floor[p->pos[dim_y] - 1][p->pos[dim_x]    ].from[dim_y] = p->pos[dim_y];
-                d->floor[p->pos[dim_y] - 1][p->pos[dim_x]    ].from[dim_x] = p->pos[dim_x];
-                heap_decrease_key_no_replace(&h, path[p->pos[dim_y] - 1]p->pos[dim_x]    ].hn);
-            }
-            if ((d->floor[p->pos[dim_y]    ][p->pos[dim_x] - 1].hn) &&
-                (d->floor[p->pos[dim_y]    ][p->pos[dim_x] - 1].cost >
-                 p->cost + hardnesspair(p->pos))) {
-                d->floor[p->pos[dim_y]    ][p->pos[dim_x] - 1].cost = p->cost + hardnesspair(p->pos);
-                d->floor[p->pos[dim_y]    ][p->pos[dim_x] - 1].from[dim_y] = p->pos[dim_y];
-                d->floor[p->pos[dim_y]    ][p->pos[dim_x] - 1].from[dim_x] = p->pos[dim_x];
-                heap_decrease_key_no_replace(&h, path[p->pos[dim_y]    ][p->pos[dim_x] - 1].hn);
-            }
-            if ((d->floor[p->pos[dim_y]    ][p->pos[dim_x] + 1].hn) &&
-                (d->floor[p->pos[dim_y]    ][p->pos[dim_x] + 1].cost >
-                 p->cost + hardnesspair(p->pos))) {
-                d->floor[p->pos[dim_y]    ][p->pos[dim_x] + 1].cost = p->cost + hardnesspair(p->pos);
-                d->floor[p->pos[dim_y]    ][p->pos[dim_x] + 1].from[dim_y] = p->pos[dim_y];
-                d->floor[p->pos[dim_y]    ][p->pos[dim_x] + 1].from[dim_x] = p->pos[dim_x];
-                heap_decrease_key_no_replace(&h, path[p->pos[dim_y]    ][p->pos[dim_x] + 1].hn);
-            }
-            if ((d->floor[p->pos[dim_y] + 1][p->pos[dim_x]    ].hn) &&
-                (d->floor[p->pos[dim_y] + 1][p->pos[dim_x]    ].cost >
-                p->cost + hardnesspair(p->pos))) {
-                d->floor[p->pos[dim_y] + 1][p->pos[dim_x]    ].cost = p->cost + hardnesspair(p->pos);
-                d->floor[p->pos[dim_y] + 1][p->pos[dim_x]    ].from[dim_y] = p->pos[dim_y];
-                d->floor[p->pos[dim_y] + 1][p->pos[dim_x]    ].from[dim_x] = p->pos[dim_x];
-                heap_decrease_key_no_replace(&h, path[p->pos[dim_y] + 1][p->pos[dim_x]    ].hn);
-            }
+    while ((p = heap_remove_min(&h))) {
+        p->hn = NULL;
+        // 4 cases for cardinal directions
+        if ((d->path[p->pos[dimY] - 1][p->pos[dimX]    ].hn) &&
+            (d->path[p->pos[dimY] - 1][p->pos[dimX]    ].cost >
+             p->cost + d->hardness[p->pos[dimY]][p->pos[dimX]] / 85)) {
+            d->path[p->pos[dimY] - 1][p->pos[dimX]    ].cost = p->cost + d->hardness[p->pos[0]][p->pos[1]] / 85 + 1;
+            heap_decrease_key_no_replace(&h, d->path[p->pos[dimY] - 1][p->pos[dimX]    ].hn);
+        }
+        if ((d->path[p->pos[dimY]    ][p->pos[dimX] - 1].hn) &&
+            (d->path[p->pos[dimY]    ][p->pos[dimX] - 1].cost >
+             p->cost + d->hardness[p->pos[dimY]][p->pos[dimX]] / 85)) {
+            d->path[p->pos[dimY]    ][p->pos[dimX] - 1].cost = p->cost + d->hardness[p->pos[0]][p->pos[1]] / 85 + 1;
+            heap_decrease_key_no_replace(&h, d->path[p->pos[dimY]    ][p->pos[dimX] - 1].hn);
+        }
+        if ((d->path[p->pos[dimY]    ][p->pos[dimX] + 1].hn) &&
+            (d->path[p->pos[dimY]    ][p->pos[dimX] + 1].cost >
+             p->cost + d->hardness[p->pos[dimY]][p->pos[dimX]] / 85)) {
+            d->path[p->pos[dimY]    ][p->pos[dimX] + 1].cost = p->cost + d->hardness[p->pos[0]][p->pos[1]] / 85 + 1;
+            heap_decrease_key_no_replace(&h, d->path[p->pos[dimY]    ][p->pos[dimX] + 1].hn);
+        }
+        if ((d->path[p->pos[dimY] + 1][p->pos[dimX]    ].hn) &&
+            (d->path[p->pos[dimY] + 1][p->pos[dimX]    ].cost >
+             p->cost + d->hardness[p->pos[dimY]][p->pos[dimX]] / 85)) {
+            d->path[p->pos[dimY] + 1][p->pos[dimX]    ].cost = p->cost + d->hardness[p->pos[0]][p->pos[1]] / 85 + 1;
+            heap_decrease_key_no_replace(&h, d->path[p->pos[dimY] + 1][p->pos[dimX]    ].hn);
+        }
+        // 4 more cases for diagonal directions. 
+        if ((d->path[p->pos[dimY] - 1][p->pos[dimX] - 1].hn) &&
+            (d->path[p->pos[dimY] - 1][p->pos[dimX] - 1].cost >
+             p->cost + d->hardness[p->pos[dimY]][p->pos[dimX]] / 85)) {
+            d->path[p->pos[dimY] - 1][p->pos[dimX] - 1].cost = p->cost + d->hardness[p->pos[0]][p->pos[1]] / 85 + 1;
+            heap_decrease_key_no_replace(&h, d->path[p->pos[dimY] - 1][p->pos[dimX] - 1].hn);
+        }
+        if ((d->path[p->pos[dimY] - 1][p->pos[dimX] + 1].hn) &&
+            (d->path[p->pos[dimY] - 1][p->pos[dimX] + 1].cost >
+             p->cost + d->hardness[p->pos[dimY]][p->pos[dimX]] / 85)) {
+            d->path[p->pos[dimY] - 1][p->pos[dimX] + 1].cost = p->cost + d->hardness[p->pos[0]][p->pos[1]] / 85 + 1;
+            heap_decrease_key_no_replace(&h, d->path[p->pos[dimY] - 1][p->pos[dimX] + 1].hn);
+        }
+        if ((d->path[p->pos[dimY] + 1][p->pos[dimX] - 1].hn) &&
+            (d->path[p->pos[dimY] + 1][p->pos[dimX] - 1].cost >
+             p->cost + d->hardness[p->pos[dimY]][p->pos[dimX]] / 85)) {
+            d->path[p->pos[dimY] + 1][p->pos[dimX] - 1].cost = p->cost + d->hardness[p->pos[0]][p->pos[1]] / 85 + 1;
+            heap_decrease_key_no_replace(&h, d->path[p->pos[dimY] + 1][p->pos[dimX] - 1].hn);
+        }
+        if ((d->path[p->pos[dimY] + 1][p->pos[dimX] + 1].hn) &&
+            (d->path[p->pos[dimY] + 1][p->pos[dimX] + 1].cost >
+             p->cost + d->hardness[p->pos[dimY]][p->pos[dimX]] / 85)) {
+            d->path[p->pos[dimY] + 1][p->pos[dimX] + 1].cost = p->cost + d->hardness[p->pos[0]][p->pos[1]] / 85 + 1;
+            heap_decrease_key_no_replace(&h, d->path[p->pos[dimY] + 1][p->pos[dimX] + 1].hn);
         }
     }
+    printMap(d);
 }
 
-/*****************************************
- *          Non-tunneling Graph          *
- *****************************************/
-void nonTunGraph()
-{
-    
-}
-
-/*****************************************
- *            Tunneling Graph            *
- *****************************************/
-void tunGraph() 
-{
-    
-}
 
 /*****************************************
  *           File Path Finder            *
@@ -568,7 +516,7 @@ void saveGame(FILE *f, dungeon d)
     int i, j;
     for(i = 0; i < floorMaxY; i++){
         for(j = 0; j < floorMaxX; j++){
-            fwrite(&d.floor[i][j].hardness, 1, 1, f);
+            fwrite(&d.hardness[i][j], 1, 1, f);
         }
     }
 
@@ -628,20 +576,20 @@ void loadGame(FILE *f, dungeon *d)
     // Player Character location
     fread(&d->player.x, 1, 1, f);
     fread(&d->player.y, 1, 1, f);
-    d->floor[d->player.y][d->player.x].type = playerChar;
+    d->floor[d->player.y][d->player.x] = playerChar;
    
     // Dungeon hardness
     int i, j, k;
     for(i = 0; i < floorMaxY; i++){
         for(j = 0; j < floorMaxX; j++){
-            fread(&d->floor[i][j].hardness, 1, 1, f);
-            if(d->floor[i][j].hardness == 0 && d->floor[i][j].type != playerChar){
-                d->floor[i][j].type = corridorChar; 
-            } else if(d->floor[i][j].hardness != 0){
-                d->floor[i][j].type = rockChar;
+            fread(&d->hardness[i][j], 1, 1, f);
+            if(d->hardness[i][j] == 0 && d->floor[i][j] != playerChar){
+                d->floor[i][j] = corridorChar; 
+            } else if(d->hardness[i][j] != 0){
+                d->floor[i][j] = rockChar;
             } 
-            if(d->floor[i][j].hardness == 255){
-                d->floor[i][j].type = edgeChar;
+            if(d->hardness[i][j] == 255){
+                d->floor[i][j] = edgeChar;
             }
         }
     }
@@ -661,8 +609,8 @@ void loadGame(FILE *f, dungeon *d)
    
         for (j = 0; j < d->roomList[i].sizeY; j++) {
             for (k = 0; k < d->roomList[i].sizeX; k++) {
-                if(d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k].type != playerChar){
-                    d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k].type = roomChar;
+                if(d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k] != playerChar){
+                    d->floor[d->roomList[i].cornerY + j][d->roomList[i].cornerX + k] = roomChar;
                 }
             }
         }
@@ -679,7 +627,7 @@ void loadGame(FILE *f, dungeon *d)
     for(i = 0; i < d->numUStairs; i++) {
         fread(&d->stairListU[i].x, 1, 1, f); // BUG
         fread(&d->stairListU[i].y, 1, 1, f);
-        d->floor[d->stairListU[i].y][d->stairListU[i].x].type = upChar;
+        d->floor[d->stairListU[i].y][d->stairListU[i].x] = upChar;
     }
 
     // Number of down stairs
@@ -693,7 +641,7 @@ void loadGame(FILE *f, dungeon *d)
     for(i = 0; i < d->numDStairs; i++) {
         fread(&d->stairListD[i].x, 1, 1, f);
         fread(&d->stairListD[i].y, 1, 1, f);
-        d->floor[d->stairListD[i].y][d->stairListD[i].x].type = downChar;
+        d->floor[d->stairListD[i].y][d->stairListD[i].x] = downChar;
     }
     
     printGame(d);
@@ -708,7 +656,7 @@ void printGame(dungeon *d)
     int i, j;
     for(i = 0; i < floorMaxY; i++){ 
         for(j = 0; j < floorMaxX; j++){
-            switch(d->floor[i][j].type) {
+            switch(d->floor[i][j]) {
                 case edgeChar :
                     printf("%c", edgeChar);
                     break;
@@ -736,46 +684,31 @@ void printGame(dungeon *d)
         }
         printf("\n");
     }
+    printf("\n");
 }
 
 /*****************************************
  *             Map Printer               *
  *****************************************/
-void printMap(dungeon *d, char maptype[]) 
+void printMap(dungeon *d) 
 {
     int i, j;
-    // Print distance maps
-    if(!strcmp(maptype, "tunneler")){
-        for(i = 0; i < floorMaxY; i++){
-            for(j = 0; j < floorMaxX; j++){
-                if(d->floor[i][j].tunDist != -1 || d->floor[i][j].type != playerChar){ // Distance from Player
-                    printf("%d ", d->floor[i][j].tunDist % 10);
-                } else if(d->floor[i][j].type == edgeChar) { // Border
-                    printf("%c ", edgeChar);
-                } else if(d->floor[i][j].type == playerChar) { // Player
-                    printf("%c ", playerChar);
-                } else { 
-                    printf(" "); // Rooms
-                }
+    
+    for(i = 0; i < floorMaxY; i++){
+        for(j = 0; j < floorMaxX; j++){
+            if(d->path[i][j].cost < 1000 && d->floor[i][j] != playerChar){ // Distance from Player
+                printf("%d", d->path[i][j].cost % 10);
+            } else if(d->floor[i][j] == edgeChar) { // Border
+                printf("%c", edgeChar);
+            } else if(d->floor[i][j] == playerChar) { // Player
+                printf("%c", playerChar);
+            } else { 
+                printf("%c", rockChar); // Rocks
             }
-            printf("\n");
         }
-    } else { 
-        for(i = 0; i < floorMaxY; i++){
-            for(j = 0; j < floorMaxX; j++){
-                if(d->floor[i][j].type != playerChar){ // Distance from Player
-                    printf("%d ", d->floor[i][j].nonTunDist % 10);
-                } else if(d->floor[i][j].type == edgeChar) { // Border
-                    printf("%c ", edgeChar);
-                } else if(d->floor[i][j].type == playerChar) { // Player
-                    printf("%c ", playerChar);
-                } else { 
-                    printf("E"); // Error
-                }
-            }
-            printf("\n");
-        }
-    } 
+        printf("\n");
+    }
+    printf("\n");
 }
 
 /*****************************************

@@ -14,3 +14,4 @@ Assignment 1.02
 2/18/21 4:00 AM JCR: Created dungeon struct, refactored all of the functions, fixed bugs. Finally, success.
 Assignment 1.03
 2/22/21 8:00 PM JCR JTG TOM: Began implementation of Dijkstra's for use in the path-finding algorithms.
+2/23/21 6:60 PM JCR TOM: Finish implementation of Dijkstra's and successfull printed the maps.
