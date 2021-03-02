@@ -28,8 +28,10 @@
 #define upChar       '<'        //Hardness = 0
 #define downChar     '>'        //Hardness = 0
 #define playerChar   '@'
+#define monChar      'M'
 #define dimY          0
-#define dimX          1      
+#define dimX          1   
+#define defaultMonNum 10   
 
 typedef struct corPath {
   heap_node_t *hn;
@@ -45,9 +47,25 @@ typedef struct room {
 } room;
 
 typedef struct pc { 
+    
+} pc;
+
+typedef struct npc {
+    int8_t type;
+    char typeChar;
+} npc; 
+
+typedef struct character {
     int8_t x;
     int8_t y;
-} pc;
+    int8_t speed;
+    int8_t nTurn;
+    int8_t isPC;
+    union Entity {
+        pc player;
+        npc nonPlayer;
+    } entity;
+} character;
 
 typedef struct stair {
     int8_t x;
@@ -60,13 +78,14 @@ typedef struct dungeon {
     uint8_t hardness[floorMaxY][floorMaxX];
     uint8_t nonTunDist[floorMaxY][floorMaxX];
     uint8_t tunDist[floorMaxY][floorMaxX];
+    character *charMap; // Player is [0], monsters after that
     room *roomList;
     stair *stairListU;
     stair *stairListD;
-    pc player;
     int16_t numRooms;
     int16_t numUStairs;
     int16_t numDStairs;
+    int numMon;
 } dungeon; 
 
 /*****************************************
@@ -79,6 +98,8 @@ void borderGen(dungeon *d);
 void roomGen(dungeon *d);
 void staircaseGen(dungeon *d);
 void playerGen(dungeon *d);
+void monsterGen(dungeon *d);
+char itohexc(int8_t num);
 void dijkstra(dungeon *d, char str[]);
 char *findFilePath();
 void saveGame(FILE *f, dungeon d);
@@ -94,11 +115,13 @@ int main(int argc, char *argv[])
 {
     srand(time(NULL)); // Seed/Random
     dungeon d;
+    d.charMap = NULL;
     d.roomList = NULL;
     d.stairListU = NULL;
     d.stairListD = NULL;
     int i;
     bool gameLoaded = false;
+    bool monSet = false;
     FILE *f;
 
     //printf("%s\n", findFilePath());
@@ -116,12 +139,35 @@ int main(int argc, char *argv[])
         }
     }
 
+    if(argc >= 2){
+        for(i = 1; i < argc; i++){
+            if(!strcmp(argv[i], "--nummon")){
+                if(argv[i + 1] == NULL || !strcmp(argv[i + 1], "--load") || !strcmp(argv[i + 1], "--save")){
+                    fprintf(stderr, "--nummon doesn't have an entered value");
+                    exit(1);
+                }
+                // Finding number of characters and allocating memory
+                d.charMap = malloc((atoi(argv[i + 1]) + 1) * sizeof(character)); // + 1 for Player Character
+                monSet = true;
+                d.numMon = atoi(argv[i + 1]);
+                break;
+            }
+        }
+    }
+
+    if (!monSet) {
+        d.charMap = malloc((defaultMonNum + 1) * sizeof(character)); // + 1 for Player Character
+        d.numMon = defaultMonNum;
+    }
+
     if(!gameLoaded){
         gameGen(&d);
     }
     
     dijkstra(&d, "non-tunneling");
     dijkstra(&d, "tunneling");
+    monsterGen(&d);
+    printGame(&d);
 
     if(argc >= 2){
         for(i = 1; i < argc; i++){
@@ -161,7 +207,7 @@ void gameGen(dungeon *d)
     corridorGen(d); 
     staircaseGen(d);
     playerGen(d);
-    printGame(d); // Needs to be last in function
+    //printGame(d); // Needs to be last in function
 }
 
 /*****************************************
@@ -320,33 +366,120 @@ void staircaseGen(dungeon *d)
  *           Player Generator            *
  *****************************************/
 void playerGen(dungeon *d) {
-    int ranY, ranX, ran;
+    int ranY, ranX, room;
     bool placed = false;
 
     while(!placed){
-        ran = rand() % d->numRooms;
-        ranY = d->roomList[ran].cornerY + (rand() % d->roomList[ran].sizeY);
-        ranX = d->roomList[ran].cornerX + (rand() % d->roomList[ran].sizeX);
+        room = d->numRooms - 1;
+        ranY = d->roomList[room].cornerY + (rand() % d->roomList[room].sizeY);
+        ranX = d->roomList[room].cornerX + (rand() % d->roomList[room].sizeX);
         
         if(d->floor[ranY][ranX] != upChar && d->floor[ranY][ranX] != downChar){
-            d->player.y = ranY;
-            d->player.x = ranX;
-            d->floor[d->player.y][d->player.x] = playerChar;
+            d->charMap[0].y = ranY;
+            d->charMap[0].x = ranX;
+            d->charMap[0].isPC = 1;
+            d->charMap[0].speed = 10;
+            d->floor[d->charMap[0].y][d->charMap[0].x] = playerChar;
             placed = true;
         }
     }
 }
 
-// Priority queue
-// Two pathfinding algorithms (Dijkstra's treating each cell in the dungeon as a node in a graph with 8-way connectivity)
-// Non-tunneling
-// - Floor (and stairs) are weight 1
-// - Ignore wall cells
-// Tunneling
-// - Hardness of 0 are weight 1
-// - Hardness [1, 254] are weight 1 + (hardness/85)
-// - Hardness of 255 has infinite weight (not in the queue)
-// Two distance maps (non-tunneling and tunneling) of the distance from PC
+/*****************************************
+ *          Monster Generator            *
+ *****************************************/
+void monsterGen(dungeon *d) {
+    int i, monsterVal, intelligence, telepathy, tunneling, erratic, ranY, ranX, ran;
+    bool placed;
+    
+    for (i = 1; i < d->numMon + 1; i++) { // Starting at 1 because PC is 0 in charMap
+        intelligence = rand() % 2;
+        telepathy = rand() % 2;
+        tunneling = rand() % 2;
+        erratic = rand() % 2;
+
+        monsterVal = 0;
+
+        if(erratic)
+            monsterVal += 8;
+        if(tunneling)
+            monsterVal += 4;
+        if(telepathy)
+            monsterVal += 2;
+        if(intelligence)
+            monsterVal += 1;
+            
+        d->charMap[i].entity.nonPlayer.typeChar = itohexc(monsterVal);
+        d->charMap[i].entity.nonPlayer.type = monsterVal;
+        d->charMap[i].isPC = 0;
+        d->charMap[i].speed = (rand() % 16) + 5;
+        d->charMap[i].nTurn = 0;
+        
+        ran = rand() % (d->numRooms - 1); // Room Monster is placed in (Not player's)
+        placed = false;
+        int j, roomSpace;
+        for(j = 0; j < d->numRooms; j++){
+            roomSpace += d->roomList[j].sizeY * d->roomList[j].sizeX;
+        }
+
+        while(!placed && roomSpace > 0){
+
+            ranY = d->roomList[ran].cornerY + (rand() % d->roomList[ran].sizeY);
+            ranX = d->roomList[ran].cornerX + (rand() % d->roomList[ran].sizeX);
+            d->charMap[i].y = ranY;
+            d->charMap[i].x = ranX;
+
+            if(d->floor[ranY][ranX] == roomChar){
+                placed = true;
+                roomSpace--;
+            }
+        }
+        d->floor[ranY][ranX] = d->charMap[i].entity.nonPlayer.typeChar;
+    }
+}
+
+/*****************************************
+ *             Int Convertor             *
+ *****************************************/
+char itohexc(int8_t num)
+{
+    switch(num){
+        case 0 :
+            return '0';
+        case 1 :
+            return '1';
+        case 2 :
+            return '2';
+        case 3 :
+            return '3';
+        case 4 :
+            return '4';
+        case 5 :
+            return '5';
+        case 6 :
+            return '6';
+        case 7 :
+            return '7';
+        case 8 :
+            return '8';
+        case 9 :
+            return '9';
+        case 10 :
+            return 'a';
+        case 11 :
+            return 'b';
+        case 12 :
+            return 'c';
+        case 13 :
+            return 'd';
+        case 14 :
+            return 'e';
+        case 15 :
+            return 'f';
+        default : 
+            return 'E';
+    }
+}
 
 /*****************************************
  *        Corridor Path Compare          *
@@ -382,7 +515,7 @@ void dijkstra(dungeon *d, char str[])
         }
     }
 
-    d->path[d->player.y][d->player.x].cost = 0; 
+    d->path[d->charMap[0].y][d->charMap[0].x].cost = 0; 
 
     heap_init(&h, corridor_path_cmp, NULL); 
     
@@ -509,8 +642,8 @@ void saveGame(FILE *f, dungeon d)
     fwrite(&size, 4, 1, f);
 
     // Player Character location
-    fwrite(&d.player.x, 1, 1, f);
-    fwrite(&d.player.y, 1, 1, f);
+    fwrite(&d.charMap[0].x, 1, 1, f);
+    fwrite(&d.charMap[0].y, 1, 1, f);
     
     // Dungeon hardness
     int i, j;
@@ -574,9 +707,9 @@ void loadGame(FILE *f, dungeon *d)
     size = be32toh(size);
 
     // Player Character location
-    fread(&d->player.x, 1, 1, f);
-    fread(&d->player.y, 1, 1, f);
-    d->floor[d->player.y][d->player.x] = playerChar;
+    fread(&d->charMap[0].x, 1, 1, f);
+    fread(&d->charMap[0].y, 1, 1, f);
+    d->floor[d->charMap[0].y][d->charMap[0].x] = playerChar;
    
     // Dungeon hardness
     int i, j, k;
@@ -656,7 +789,8 @@ void printGame(dungeon *d)
     int i, j;
     for(i = 0; i < floorMaxY; i++){ 
         for(j = 0; j < floorMaxX; j++){
-            switch(d->floor[i][j]) {
+            printf("%c", d->floor[i][j]);
+            /* switch(d->floor[i][j]) {
                 case edgeChar :
                     printf("%c", edgeChar);
                     break;
@@ -680,7 +814,7 @@ void printGame(dungeon *d)
                     break;
                 default :
                     printf("E"); // Error
-            }
+            } */
         }
         printf("\n");
     }
@@ -719,4 +853,5 @@ void dungeonDelete(dungeon d)
     free(d.roomList);
     free(d.stairListU);
     free(d.stairListD);
+    free(d.charMap);
 }
