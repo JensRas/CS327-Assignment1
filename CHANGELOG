@@ -17,3 +17,4 @@ Assignment 1.03
 2/23/21 6:60 PM JCR TOM: Finish implementation of Dijkstra's and successfull printed the maps.
 Assignment 1.04
 3/1/21 8:00 PM JCR JTG TOM: Began implementation of monsterGen.
+3/4/21 1:45 PM JCR TOM: Added monster_cmp, changed charList to charMap[21][80], started implementation of different monster characteristics
