@@ -9,6 +9,7 @@
 #include <endian.h>
 #include <stdint.h>
 #include <limits.h>
+#include <unistd.h>
 
 #include "heap.h"
 #include "heap.c"
@@ -28,10 +29,9 @@
 #define upChar       '<'        //Hardness = 0
 #define downChar     '>'        //Hardness = 0
 #define playerChar   '@'
-#define monChar      'M'
 #define dimY          0
 #define dimX          1   
-#define defaultMonNum 10 
+#define defaultMonNum 4 
 #define BIT_SMART     0x1
 #define BIT_TELE      0x2
 #define BIT_TUN       0x4  
@@ -57,7 +57,6 @@ typedef struct pc {
 
 typedef struct npc {
     int8_t type;
-    //char typeChar;
     int8_t knownPCX;
     int8_t knownPCY;
 } npc; 
@@ -67,7 +66,7 @@ typedef struct character {
     int8_t x;
     int8_t y;
     int8_t speed;
-    int8_t nTurn;
+    int nTurn;
     int8_t isPC;
     int8_t isAlive;
     int8_t sequenceNum;
@@ -88,7 +87,7 @@ typedef struct dungeon {
     uint8_t hardness[floorMaxY][floorMaxX];
     uint8_t nonTunDist[floorMaxY][floorMaxX];
     uint8_t tunDist[floorMaxY][floorMaxX];
-    character *charMap[floorMaxY][floorMaxX];
+    character charMap[floorMaxY][floorMaxX];
     room *roomList;
     stair *stairListU;
     stair *stairListD;
@@ -109,7 +108,9 @@ void roomGen(dungeon *d);
 void staircaseGen(dungeon *d);
 void playerGen(dungeon *d);
 void monsterGen(dungeon *d);
-char itohexc(int8_t num);
+void gameRunner(dungeon *d);
+void winGame();
+void loseGame();
 void dijkstra(dungeon *d, char str[]);
 char *findFilePath();
 void saveGame(FILE *f, dungeon d);
@@ -128,7 +129,7 @@ int main(int argc, char *argv[])
     d.roomList = NULL;
     d.stairListU = NULL;
     d.stairListD = NULL;
-    int i;
+    int i, y, x, entityCount;
     bool gameLoaded = false;
     bool monSet = false;
     FILE *f;
@@ -170,6 +171,31 @@ int main(int argc, char *argv[])
     dijkstra(&d, "tunneling");
     monsterGen(&d);
     printGame(&d);
+    
+    while(1){
+        entityCount = 0;
+        gameRunner(&d);
+        //check for pc and monsters
+        for(y = 0; y < floorMaxY; y++){
+            for(x = 0; x < floorMaxX; x++){
+                if(d.charMap[y][x].isPC){
+                    if(!d.charMap[y][x].isAlive) {
+                        loseGame();
+                        return 0;
+                    }
+                }
+                if(d.charMap[y][x].isAlive){
+                    entityCount++;
+                }
+            }
+        }
+        if(entityCount <= 1){
+            winGame();
+            return 0;
+        }
+        printGame(&d);
+        usleep(10000 * 60);
+    }
 
     if(argc >= 2){
         for(i = 1; i < argc; i++){
@@ -368,24 +394,34 @@ void staircaseGen(dungeon *d)
  *           Player Generator            *
  *****************************************/
 void playerGen(dungeon *d) {
-    int ranY, ranX, room;
+    int ranY, ranX, room, x , y;
     bool placed = false;
+
+    for(y = 0; y < floorMaxY; y++){
+        for(x = 0; x < floorMaxX; x++){
+            d->charMap[y][x].y = y;
+            d->charMap[y][x].x = x;
+            d->charMap[y][x].isPC = 0;
+            d->charMap[y][x].isAlive = 0;
+            d->charMap[y][x].speed = 0;
+            d->charMap[y][x].sequenceNum = 0;
+            d->charMap[y][x].nTurn = 0;
+        }
+    }
 
     while(!placed){
         room = d->numRooms - 1;
         ranY = d->roomList[room].cornerY + (rand() % d->roomList[room].sizeY);
         ranX = d->roomList[room].cornerX + (rand() % d->roomList[room].sizeX);
         
-        if(d->floor[ranY][ranX] != upChar && d->floor[ranY][ranX] != downChar){
-            character *pcp;
-            pcp->y = ranY;
-            pcp->x = ranX;
-            pcp->isPC = 1;
-            pcp->isAlive = 1
-            pcp->speed = 10;
-            pcp->sequenceNum = 0;
-            d->charMap[ranY][ranX] = pcp;
-            d->floor[ranY][ranY] = playerChar;
+        if(d->floor[ranY][ranX] != upChar && d->floor[ranY][ranX] != downChar) {
+            d->charMap[ranY][ranX].y = ranY;
+            d->charMap[ranY][ranX].x = ranX;
+            d->charMap[ranY][ranX].isPC = 1;
+            d->charMap[ranY][ranX].isAlive = 1;
+            d->charMap[ranY][ranX].speed = 10;
+            d->charMap[ranY][ranX].sequenceNum = 0;
+            d->floor[ranY][ranX] = playerChar;
             placed = true;
         }
     }
@@ -419,162 +455,17 @@ void monsterGen(dungeon *d) {
                 roomSpace--;
             }
         }
-        
-        character *monster;
-        monster->x = ranX;
-        monster->y = ranY;
-        monster->entity.nonPlayer.type = rand() & 0xf;
-        monster->isPC = 0;
-        monster->isAlive = 1;
-        monster->speed = (rand() % 16) + 5;
-        monster->nTurn = 0;
-        monster->sequenceNum = i + 1;
-        monster->entity.nonPlayer.knownPCX = NULL;
-        monster->entity.nonPlayer.knownPCY = NULL;
-        d->charMap[ranY][ranX] = monster;
-        //d->floor[ranY][ranX] = d->charMap[ranY][ranX].entity.nonPlayer.typeChar; // Fix printing monsters
-    }
-}
-/*****************************************
- *             Game Runnner              *
- *****************************************/
-void gameRunner(dungeon *d)
-{
-    character *c;
-    heap_t h; 
-    int y, x;
-    /*
-    add player to queue v
-    add all monsters v
-    everyone should have turn = 0 v
-    player goes first
-     - remove from queue
-     - update nTurn (nTurn += 1000/speed)
-     - add back to queue
-    then monsters by sequence
-     - remove from queue
-     - update nTurn (nTurn += 1000 / speed)
-     - add back to queue
-    update map
-    usleep(10000) in main
-    check highest speed tie goes to min sequence num
-     - remove from queue
-     - update nTurn (nTurn += 1000 / speed)
-     - add back to queue
-    */
 
-    heap_init(&h, monster_cmp, NULL); 
-   
-    for(y = 0; y < floorMaxY; y++){
-        for(x = 0; x < floorMaxX; x++){
-            if(d->charMap[y][x]->isPC)
-                d->charMap[y][x]->hn = heap_insert(&h, d->charMap[y][x]);
-            else 
-                d->charMap[y][x]->hn = NULL;
-        }
-    }
-
-    for(y = 0; y < floorMaxY; y++){
-        for(x = 0; x < floorMaxX; x++){
-            if(!(d->charMap[y][x]->isPC))
-                d->charMap[y][x]->hn = heap_insert(&h, d->charMap[y][x]);
-            else 
-                d->charMap[y][x]->hn = NULL;
-        }
-    }
-
-    while(c = heap_remove_min(&h)){
-        c->hn = NULL;
-        bool isSmart = false;
-        bool isTele = false;
-        bool isTun = false;
-        bool isErat = false;
-
-        if(c->isPC){
-            //move pc ???
-        } else { // Monster
-            if(c->entity.nonPlayer.type & BIT_SMART){ // Understand layout, move on shortest path (nowhere if no LoS)
-                isSmart = true;
-            }
-            if(c->entity.nonPlayer.type & BIT_TELE){ // Always knows where PC is, always move toward PC
-                isTele = true;
-            } 
-            if(c->entity.nonPlayer.type & BIT_TUN){ // Tunnel through rock (tunnelling map)
-                isTun = true;
-            }
-            if(c->entity.nonPlayer.type & BIT_ERAT){ // 50% chance of moving to random neighboring cell
-                isErat = true;
-            }
-
-            
-        }
-        
-        if(isTele){
-            c->entity.nonPlayer.knownPCX = c->entity.player.x;
-            c->entity.nonPlayer.knownPCY = c->entity.player.y;
-        }
-        int temp = 100;
-        tempY = 0; 
-        tempX = 0;
-
-        if(c->entity.nonPlayer.knownPCX != 0){
-            if(isSmart && isTun){ // Need to do LoS
-                // Update knownPCY/X if same room
-                for(y = -1; y < 1; y++){
-                    for(x = -1; x < 1; x++){
-                        if(temp > d->tunDist[y + c->entity.nonPlayer.knownPCY][x + c->entity.nonPlayer.knownPCX])
-                            temp = d->tunDist[y + c->entity.nonPlayer.knownPCY][x + c->entity.nonPlayer.knownPCX];
-                            tempY = y + c->entity.nonPlayer.knownPCY;
-                            tempX = x + c->entity.nonPlayer.knownPCX;
-                    }
-                }
-                if(isErat && rand() % 2 == 0){
-                    int ran = 1, ran2 = 1;
-                    while (ran == 1 || ran2 == 1) {
-                        ran = rand() % 3;
-                        ran2 = rand() % 3;
-                    }
-                    c->y = c->entity.nonPlayer.knownPCY - 1 + ran;
-                    c->x = c->entity.nonPlayer.knownPCX - 1 + ran2;
-                } else {
-                    c->y = tempY;
-                    c->x = tempX;
-                }
-            } else if (isSmart) {
-                // Update knownPCY/X if same room
-                for(y = -1; y < 1; y++){
-                    for(x = -1; x < 1; x++){
-                        if(temp > d->nonTunDist[y + c->entity.nonPlayer.knownPCY][x + c->entity.nonPlayer.knownPCX]){
-                            temp = d->nonTunDist[y + c->entity.nonPlayer.knownPCY][x + c->entity.nonPlayer.knownPCX];
-                            tempY = y + c->entity.nonPlayer.knownPCY;
-                            tempX = x + c->entity.nonPlayer.knownPCX;
-                        }
-                    }
-                }
-                if(isErat && rand() % 2 == 0){
-                    int ran = 1, ran2 = 1;
-                    while (ran == 1 || ran2 == 1) {
-                        ran = rand() % 3;
-                        ran2 = rand() % 3;
-                    }
-                    c->y = c->entity.nonPlayer.knownPCY - 1 + ran;
-                    c->x = c->entity.nonPlayer.knownPCX - 1 + ran2;
-                } else {
-                    c->y = tempY;
-                    c->x = tempX;
-                }
-            } else if (isTun) { // Not smart (No Memory), Tun
-                // if (LoS) // Same room is good enough
-                // Move one tile (diagonal or orthogonal) closer to PC
-            } else { // Not Smart (No memory), Not Tun
-                // if (LoS) // Same room is good enough
-                // Move one tile (diagonal or orthogonal) closer to PC AND get stuck if that tile is a wall
-            }
-
-        }
-
-
-        c->nTurn += 1000 / c->speed;
+        d->charMap[ranY][ranX].x = ranX;
+        d->charMap[ranY][ranX].y = ranY;
+        d->charMap[ranY][ranX].entity.nonPlayer.type = rand() & 0xf;
+        d->charMap[ranY][ranX].isPC = 0;
+        d->charMap[ranY][ranX].isAlive = 1;
+        d->charMap[ranY][ranX].speed = (rand() % 16) + 5;
+        d->charMap[ranY][ranX].nTurn = 0;
+        d->charMap[ranY][ranX].sequenceNum = i + 1;
+        d->charMap[ranY][ranX].entity.nonPlayer.knownPCX = 0;
+        d->charMap[ranY][ranX].entity.nonPlayer.knownPCY = 0;
     }
 }
 
@@ -590,6 +481,275 @@ static int32_t monster_cmp(const void *first, const void *second) {
         return f->nTurn - s->nTurn;
     }
 }
+char *print_int(const void *v)
+{
+  static char out[640];
+
+  snprintf(out, 640, "%x", *((int *) v));
+
+  return out;
+}
+
+/*****************************************
+ *             Game Runnner              *
+ *****************************************/
+void gameRunner(dungeon *d)
+{
+    character *c, *tmp;
+    heap_t h; 
+    int y, x, i;
+    int ran, ran2;
+
+    heap_init(&h, monster_cmp, NULL); 
+   
+    for(y = 0; y < floorMaxY; y++){
+        for(x = 0; x < floorMaxX; x++){
+            if(d->charMap[y][x].isPC) {
+                d->charMap[y][x].hn = heap_insert(&h, &d->charMap[y][x]);
+            }
+            else 
+                d->charMap[y][x].hn = NULL;
+        }
+    }
+
+    for(y = 0; y < floorMaxY; y++){
+        for(x = 0; x < floorMaxX; x++){
+            if(d->charMap[y][x].isAlive && !d->charMap[y][x].isPC) {
+                d->charMap[y][x].hn = heap_insert(&h, &d->charMap[y][x]);
+            }
+            else 
+                d->charMap[y][x].hn = NULL;
+        }
+    }
+
+    while((c = heap_remove_min(&h))){
+        c->hn = NULL;
+        bool isSmart = false;
+        bool isTele = false;
+        bool isTun = false;
+        bool isErat = false;
+        int realPCY = 0;
+        int realPCX = 0;
+        int pcRoom = 0;
+
+        if(c->isPC){
+            realPCY = c->y;
+            realPCX = c->x;
+            // Move pc ???
+            // Update realPCY/X ?
+        } else { // Monster
+            if(c->entity.nonPlayer.type & BIT_SMART) // Understand layout, move on shortest path (nowhere if no LoS)
+                isSmart = true;
+            if(c->entity.nonPlayer.type & BIT_TELE) // Always knows where PC is, always move toward PC
+                isTele = true;
+            if(c->entity.nonPlayer.type & BIT_TUN) // Tunnel through rock (tunnelling map)
+                isTun = true;
+            if(c->entity.nonPlayer.type & BIT_ERAT) // 50% chance of moving to random neighboring cell
+                isErat = true;
+        }
+
+        if(!isSmart){
+            c->entity.nonPlayer.knownPCX = 0;
+            c->entity.nonPlayer.knownPCY = 0;
+        }
+        
+        if(isTele){
+            c->entity.nonPlayer.knownPCX = realPCY;
+            c->entity.nonPlayer.knownPCY = realPCX;        
+        }
+        
+        pcRoom = -1;
+        for(i = 0; i < d->numRooms; i++){
+            for(y = d->roomList[i].cornerY; y < d->roomList[i].sizeY; y++){
+                for(x = d->roomList[i].cornerX; x < d->roomList[i].sizeX; x++){
+                    if(d->charMap[y][x].isPC)
+                        pcRoom = i;
+                }
+            }
+        }
+        for(y = d->roomList[pcRoom].cornerY; y < d->roomList[pcRoom].sizeY; y++){
+            for(x = d->roomList[pcRoom].cornerX; x < d->roomList[pcRoom].sizeX; x++){
+                if(c->x == x && c->y == y){
+                    c->entity.nonPlayer.knownPCY = realPCY;
+                    c->entity.nonPlayer.knownPCX = realPCX;
+                }
+            }
+        }
+        
+        int temp = 100;
+        int tempY = 0; 
+        int tempX = 0;
+        int oldX, oldY;
+
+        if(c->isAlive){
+            if(isSmart && isTun){ // Need to do tunneling
+                for(y = -1; y < 1; y++){
+                    for(x = -1; x < 1; x++){
+                        if(temp > d->tunDist[y + c->y][x + c->x]) {
+                            temp = d->tunDist[y + c->y][x + c->x];
+                            tempY = y + c->y;
+                            tempX = x + c->x;
+                        }
+                    }
+                }
+
+                if(isErat && rand() % 2){
+                    ran = 1, ran2 = 1;
+                    while (ran == 1 || ran2 == 1) {
+                        ran = rand() % 3;
+                        ran2 = rand() % 3;
+                    }
+                    if(d->hardness[c->y - 1 + ran][c->x - 1 + ran2] != 255){ // Check walls
+                        tempY = c->y - 1 + ran;
+                        tempX = c->x - 1 + ran2;
+                    }
+                } 
+                //update hardness
+                if(d->hardness[tempY][tempX] == 0){
+                    tmp = &d->charMap[tempY][tempX];
+                    oldY = c->y;
+                    oldX = c->x;
+                    c->y = tempY;
+                    c->x = tempX;
+                    d->charMap[c->y][c->x] = *c;
+                    d->charMap[oldY][oldX] = *tmp;
+                }
+                else if (d->hardness[tempY][tempX] > 85) {
+                    d->hardness[tempY][tempX] = d->hardness[tempY][tempX] - 85;
+                    tempY = c->y;
+                    tempX = c->x;
+                }
+                else {
+                    d->hardness[tempY][tempX] = 0; 
+                    d->floor[tempY][tempX] = corridorChar;
+                }
+            } else if (isSmart) { // smart non tunneling possibly telepatic       
+                for(y = -1; y < 1; y++){
+                    for(x = -1; x < 1; x++){
+                        if(temp > d->nonTunDist[y + c->y][x + c->x]){
+                            temp = d->nonTunDist[y + c->y][x + c->x];
+                            tempY = y + c->y;
+                            tempX = x + c->x;
+                        }
+                    }
+                }
+                if(isErat && rand() % 2){
+                    ran = 1, ran2 = 1;
+                    while (ran == 1 || ran2 == 1) {
+                        ran = rand() % 3;
+                        ran2 = rand() % 3;
+                    }
+                    if(d->hardness[c->y - 1 + ran][c->x - 1 + ran2] == 0){ // Check walls
+                        tempY = c->y - 1 + ran;
+                        tempX = c->x - 1 + ran2;
+                    }
+                    tmp = &d->charMap[tempY][tempX];
+                    oldY = c->y;
+                    oldX = c->x;
+                    c->y = tempY;
+                    c->x = tempX;
+                    d->charMap[c->y][c->x] = *c;
+                    d->charMap[oldY][oldX] = *tmp;
+                }
+
+            } else if (isTun) { // Not smart (No Memory), Tunnling possibly telepathic
+                //gets "straight" direction toward known player location
+                if(c->entity.nonPlayer.knownPCY > c->y){ 
+                    tempY = c->y + 1;
+                } else if(c->entity.nonPlayer.knownPCY < c->y && c->entity.nonPlayer.knownPCY != 0){
+                    tempY = c->y - 1;
+                } else{
+                    tempY = c->y;
+                }
+                if(c->entity.nonPlayer.knownPCX > c->x){ 
+                    tempX = c->x + 1;
+                } else if(c->entity.nonPlayer.knownPCX < c->x && c->entity.nonPlayer.knownPCX != 0){
+                    tempX = c->x - 1;
+                } else{
+                    tempX = c->x;
+                }
+                
+                if(isErat && rand() % 2){
+                    ran = 1, ran2 = 1;
+                    while (ran == 1 || ran2 == 1) {
+                        ran = rand() % 3;
+                        ran2 = rand() % 3;
+                    }
+                    if(d->hardness[c->y - 1 + ran][c->x - 1 + ran2] != 255){ // Check walls
+                        tempY = c->y - 1 + ran;
+                        tempX = c->x - 1 + ran2;
+                    }
+                } 
+                //update hardness
+                if(d->hardness[tempY][tempX] == 0){
+                    tmp = &d->charMap[tempY][tempX];
+                    oldY = c->y;
+                    oldX = c->x;
+                    c->y = tempY;
+                    c->x = tempX;
+                    d->charMap[c->y][c->x] = *c;
+                    d->charMap[oldY][oldX] = *tmp;
+                }
+                else if (d->hardness[tempY][tempX] > 85 && d->hardness[tempY][tempX] != 255) {
+                    d->hardness[tempY][tempX] = d->hardness[tempY][tempX] - 85;
+                    tempY = c->y;
+                    tempX = c->x;
+                }
+                else {
+                    d->hardness[tempY][tempX] = 0; 
+                    d->floor[tempY][tempX] = corridorChar;
+                }
+            } else { // Not Smart (No memory), Not Tunneling, possibly telepathic
+                if(c->entity.nonPlayer.knownPCY > c->y){ 
+                    tempY = c->y + 1;
+                } else if(c->entity.nonPlayer.knownPCY < c->y && c->entity.nonPlayer.knownPCY != 0){
+                    tempY = c->y - 1;
+                } else {
+                    tempY = c->y;
+                }
+                if(c->entity.nonPlayer.knownPCX > c->x){ 
+                    tempX = c->x + 1;
+                } else if(c->entity.nonPlayer.knownPCX < c->x && c->entity.nonPlayer.knownPCX != 0){
+                    tempX = c->x - 1;
+                } else {
+                    tempX = c->x;
+                }
+
+                if(isErat && rand() % 2){
+                    ran = 1, ran2 = 1;
+                    while (ran == 1 || ran2 == 1) {
+                        ran = rand() % 3;
+                        ran2 = rand() % 3;
+                    }
+                    if(d->hardness[c->y - 1 + ran][c->x - 1 + ran2] == 0){
+                        tempY = c->y - 1 + ran;
+                        tempX = c->x - 1 + ran2;
+                    }
+                }
+                tmp = &d->charMap[tempY][tempX];
+                oldY = c->y;
+                oldX = c->x;
+                c->y = tempY;
+                c->x = tempX;
+                d->charMap[c->y][c->x] = *c;
+                d->charMap[oldY][oldX] = *tmp;
+            }
+            c->nTurn = c->nTurn + (1000 / c->speed);
+            if(c->isAlive){
+                heap_insert(&h, c);
+            }
+
+            c = heap_remove_min(&h);
+            printf("x:%d y:%d speed:%d nTurn:%d, sNum:%d type:%x alive:%d\n", c->x, c->y, c->speed, c->nTurn, c->sequenceNum, c->entity.nonPlayer.type, c->isAlive);
+            if(c->isPC) {
+                heap_insert(&h, c);
+                return;
+            } else {
+                heap_insert(&h, c);
+            }
+        }
+    }
+}
 
 /*****************************************
  *        Corridor Path Compare          *
@@ -597,6 +757,22 @@ static int32_t monster_cmp(const void *first, const void *second) {
 static int32_t corridor_path_cmp(const void *key, const void *with) 
 {
     return ((corPath *) key)->cost - ((corPath *) with)->cost;
+}
+
+/*****************************************
+ *              Game Win                 *
+ *****************************************/
+void winGame()
+{
+    printf("\n YOU WIN \n");
+}
+
+/*****************************************
+ *               Game Lose               *
+ *****************************************/
+void loseGame()
+{
+    printf("\n YOU LOSE \n");
 }
 
 /*****************************************
@@ -627,8 +803,8 @@ void dijkstra(dungeon *d, char str[])
 
     for (y = 0; y < floorMaxY; y++) {
         for (x = 0; x < floorMaxX; x++) {
-            if (d->charMap[y][x].isPC) {
-                d->path[d->charMap[y][x]][d->charMap[y][x]].cost = 0;
+            if(d->floor[y][x] == playerChar){
+                d->path[y][x].cost = 0;
             }
         }
     }
@@ -775,9 +951,10 @@ void saveGame(FILE *f, dungeon d)
     fwrite(&size, 4, 1, f);
 
     // Player Character location
+    int y, x;
     for (y = 0; y < floorMaxY; y++) {
         for (x = 0; x < floorMaxX; x++) {
-            if (d->charMap[y][x].isPC) {
+            if (d.charMap[y][x].isPC) {
                 fwrite(&d.charMap[y][x].x, 1, 1, f);
                 fwrite(&d.charMap[y][x].y, 1, 1, f);
             }
@@ -846,6 +1023,7 @@ void loadGame(FILE *f, dungeon *d)
     size = be32toh(size);
 
     // Player Character location
+    int y, x;
     for (y = 0; y < floorMaxY; y++) {
         for (x = 0; x < floorMaxX; x++) {
             if (d->charMap[y][x].isPC) {
@@ -931,11 +1109,14 @@ void loadGame(FILE *f, dungeon *d)
  *****************************************/
 void printGame(dungeon *d)
 {
-    int i, j;
-    for(i = 0; i < floorMaxY; i++){ 
-        for(j = 0; j < floorMaxX; j++){
-            printf("%c", d->floor[i][j]);
-            // Need to add print for monsters 
+    int y, x;
+    for(y = 0; y < floorMaxY; y++){ 
+        for(x = 0; x < floorMaxX; x++){
+            if (d->charMap[y][x].isAlive && !d->charMap[y][x].isPC) {
+                printf("%x", d->charMap[y][x].entity.nonPlayer.type);
+            } else {
+                printf("%c", d->floor[y][x]);
+            }
         }
         printf("\n");
     }
