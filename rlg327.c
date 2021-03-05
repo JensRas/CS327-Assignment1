@@ -609,6 +609,8 @@ void gameRunner(dungeon *d)
                     tmp = &d->charMap[tempY][tempX];
                     oldY = c->y;
                     oldX = c->x;
+                    tmp->y = oldY;
+                    tmp->x = oldX;
                     c->y = tempY;
                     c->x = tempX;
                     d->charMap[c->y][c->x] = *c;
@@ -646,6 +648,8 @@ void gameRunner(dungeon *d)
                     tmp = &d->charMap[tempY][tempX];
                     oldY = c->y;
                     oldX = c->x;
+                    tmp->y = oldY;
+                    tmp->x = oldX;
                     c->y = tempY;
                     c->x = tempX;
                     d->charMap[c->y][c->x] = *c;
@@ -685,6 +689,8 @@ void gameRunner(dungeon *d)
                     tmp = &d->charMap[tempY][tempX];
                     oldY = c->y;
                     oldX = c->x;
+                    tmp->y = oldY;
+                    tmp->x = oldX;
                     c->y = tempY;
                     c->x = tempX;
                     d->charMap[c->y][c->x] = *c;
@@ -729,6 +735,8 @@ void gameRunner(dungeon *d)
                 tmp = &d->charMap[tempY][tempX];
                 oldY = c->y;
                 oldX = c->x;
+                tmp->y = oldY;
+                tmp->x = oldX;
                 c->y = tempY;
                 c->x = tempX;
                 d->charMap[c->y][c->x] = *c;
