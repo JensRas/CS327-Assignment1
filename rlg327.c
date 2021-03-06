@@ -31,7 +31,7 @@
 #define playerChar   '@'
 #define dimY          0
 #define dimX          1   
-#define defaultMonNum 4 
+#define defaultMonNum 10 
 #define BIT_SMART     0x1
 #define BIT_TELE      0x2
 #define BIT_TUN       0x4  
@@ -495,10 +495,11 @@ char *print_int(const void *v)
  *****************************************/
 void gameRunner(dungeon *d)
 {
-    character *c, *tmp;
+    character *c;
     heap_t h; 
     int y, x, i;
     int ran, ran2;
+    int oldY, oldX;
 
     heap_init(&h, monster_cmp, NULL); 
    
@@ -579,7 +580,6 @@ void gameRunner(dungeon *d)
         int temp = 100;
         int tempY = 0; 
         int tempX = 0;
-        int oldX, oldY;
 
         if(c->isAlive){
             if(isSmart && isTun){ // Need to do tunneling
@@ -606,15 +606,22 @@ void gameRunner(dungeon *d)
                 } 
                 //update hardness
                 if(d->hardness[tempY][tempX] == 0){
-                    tmp = &d->charMap[tempY][tempX];
-                    oldY = c->y;
-                    oldX = c->x;
-                    tmp->y = oldY;
-                    tmp->x = oldX;
-                    c->y = tempY;
-                    c->x = tempX;
-                    d->charMap[c->y][c->x] = *c;
-                    d->charMap[oldY][oldX] = *tmp;
+                    if(c->y != tempY && c->x != tempX){
+                        oldY = c->y;
+                        oldX = c->x;
+                        c->y = tempY;
+                        c->x = tempX;
+                        d->charMap[tempY][tempX] = *c;
+                        d->charMap[oldY][oldX].y = oldY;
+                        d->charMap[oldY][oldX].x = oldX;
+                        d->charMap[oldY][oldX].speed = 0;
+                        d->charMap[oldY][oldX].nTurn = 0;
+                        d->charMap[oldY][oldX].isPC = 0;
+                        d->charMap[oldY][oldX].isAlive = 0;
+                        d->charMap[oldY][oldX].sequenceNum = 0;
+                        d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
+                        c = &d->charMap[tempY][tempX];
+                    }
                 }
                 else if (d->hardness[tempY][tempX] > 85) {
                     d->hardness[tempY][tempX] = d->hardness[tempY][tempX] - 85;
@@ -645,15 +652,22 @@ void gameRunner(dungeon *d)
                         tempY = c->y - 1 + ran;
                         tempX = c->x - 1 + ran2;
                     }
-                    tmp = &d->charMap[tempY][tempX];
-                    oldY = c->y;
-                    oldX = c->x;
-                    tmp->y = oldY;
-                    tmp->x = oldX;
-                    c->y = tempY;
-                    c->x = tempX;
-                    d->charMap[c->y][c->x] = *c;
-                    d->charMap[oldY][oldX] = *tmp;
+                    if(c->y != tempY && c->x != tempX){
+                        oldY = c->y;
+                        oldX = c->x;
+                        c->y = tempY;
+                        c->x = tempX;
+                        d->charMap[tempY][tempX] = *c;
+                        d->charMap[oldY][oldX].y = oldY;
+                        d->charMap[oldY][oldX].x = oldX;
+                        d->charMap[oldY][oldX].speed = 0;
+                        d->charMap[oldY][oldX].nTurn = 0;
+                        d->charMap[oldY][oldX].isPC = 0;
+                        d->charMap[oldY][oldX].isAlive = 0;
+                        d->charMap[oldY][oldX].sequenceNum = 0;
+                        d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
+                        c = &d->charMap[tempY][tempX];
+                    }
                 }
 
             } else if (isTun) { // Not smart (No Memory), Tunnling possibly telepathic
@@ -686,15 +700,22 @@ void gameRunner(dungeon *d)
                 } 
                 //update hardness
                 if(d->hardness[tempY][tempX] == 0){
-                    tmp = &d->charMap[tempY][tempX];
-                    oldY = c->y;
-                    oldX = c->x;
-                    tmp->y = oldY;
-                    tmp->x = oldX;
-                    c->y = tempY;
-                    c->x = tempX;
-                    d->charMap[c->y][c->x] = *c;
-                    d->charMap[oldY][oldX] = *tmp;
+                    if(c->y != tempY && c->x != tempX){
+                        oldY = c->y;
+                        oldX = c->x;
+                        c->y = tempY;
+                        c->x = tempX;
+                        d->charMap[tempY][tempX] = *c;
+                        d->charMap[oldY][oldX].y = oldY;
+                        d->charMap[oldY][oldX].x = oldX;
+                        d->charMap[oldY][oldX].speed = 0;
+                        d->charMap[oldY][oldX].nTurn = 0;
+                        d->charMap[oldY][oldX].isPC = 0;
+                        d->charMap[oldY][oldX].isAlive = 0;
+                        d->charMap[oldY][oldX].sequenceNum = 0;
+                        d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
+                        c = &d->charMap[tempY][tempX];
+                    }
                 }
                 else if (d->hardness[tempY][tempX] > 85 && d->hardness[tempY][tempX] != 255) {
                     d->hardness[tempY][tempX] = d->hardness[tempY][tempX] - 85;
@@ -732,28 +753,34 @@ void gameRunner(dungeon *d)
                         tempX = c->x - 1 + ran2;
                     }
                 }
-                tmp = &d->charMap[tempY][tempX];
-                oldY = c->y;
-                oldX = c->x;
-                tmp->y = oldY;
-                tmp->x = oldX;
-                c->y = tempY;
-                c->x = tempX;
-                d->charMap[c->y][c->x] = *c;
-                d->charMap[oldY][oldX] = *tmp;
+                if(c->y != tempY && c->x != tempX){
+                    oldY = c->y;
+                    oldX = c->x;
+                    c->y = tempY;
+                    c->x = tempX;
+                    d->charMap[tempY][tempX] = *c;
+                    d->charMap[oldY][oldX].y = oldY;
+                    d->charMap[oldY][oldX].x = oldX;
+                    d->charMap[oldY][oldX].speed = 0;
+                    d->charMap[oldY][oldX].nTurn = 0;
+                    d->charMap[oldY][oldX].isPC = 0;
+                    d->charMap[oldY][oldX].isAlive = 0;
+                    d->charMap[oldY][oldX].sequenceNum = 0;
+                    d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
+                    c = &d->charMap[tempY][tempX];
+                }
             }
-            c->nTurn = c->nTurn + (1000 / c->speed);
+ 
             if(c->isAlive){
-                heap_insert(&h, c);
-            }
-
-            c = heap_remove_min(&h);
-            printf("x:%d y:%d speed:%d nTurn:%d, sNum:%d type:%x alive:%d\n", c->x, c->y, c->speed, c->nTurn, c->sequenceNum, c->entity.nonPlayer.type, c->isAlive);
-            if(c->isPC) {
-                heap_insert(&h, c);
-                return;
-            } else {
-                heap_insert(&h, c);
+                printf("x:%d y:%d speed:%d nTurn:%d, sNum:%d type:%x alive:%d\n", c->x, c->y, c->speed, c->nTurn, c->sequenceNum, c->entity.nonPlayer.type, c->isAlive);
+                if(c->isPC) {
+                     c->nTurn = c->nTurn + (1000 / c->speed);
+                    heap_insert(&h, c);
+                    return;
+                } else {
+                    heap_insert(&h, c);
+                     c->nTurn = c->nTurn + (1000 / c->speed);
+                }
             }
         }
     }
@@ -916,6 +943,18 @@ void dijkstra(dungeon *d, char str[])
     printMap(d);
 }
 
+/*****************************************
+ *           File Path Finder            *
+ *****************************************/
+void characterSwap(character *old, character *new)
+{
+    character *tmp;
+
+    tmp = old; 
+    old = new;
+    new = tmp;
+
+}
 
 /*****************************************
  *           File Path Finder            *
