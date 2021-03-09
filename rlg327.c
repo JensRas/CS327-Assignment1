@@ -195,6 +195,8 @@ int main(int argc, char *argv[])
         }
         printGame(&d);
         usleep(10000 * 60);
+        dijkstra(&d, "non-tunneling");
+        dijkstra(&d, "tunneling");
     }
 
     if(argc >= 2){
