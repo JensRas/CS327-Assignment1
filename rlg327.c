@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <limits.h>
 #include <unistd.h>
+#include <ncurses.h>
 
 #include "heap.h"
 #include "heap.c"
@@ -100,7 +101,9 @@ typedef struct dungeon {
 /*****************************************
  *             Prototypes                *
  *****************************************/
-
+void runGame(dungeon *d);
+character *findPC(dungeon *d);
+void terminalInit();
 void gameGen(dungeon *d);
 void corridorGen(dungeon *d);
 void borderGen(dungeon *d);
@@ -109,6 +112,7 @@ void staircaseGen(dungeon *d);
 void playerGen(dungeon *d);
 void monsterGen(dungeon *d);
 void gameRunner(dungeon *d);
+void movePC(dungeon *d, int yOff, int xOff);
 void winGame();
 void loseGame();
 void dijkstra(dungeon *d, char str[]);
@@ -129,26 +133,35 @@ int main(int argc, char *argv[])
     d.roomList = NULL;
     d.stairListU = NULL;
     d.stairListD = NULL;
-    int i, y, x, entityCount;
+    int i;
     bool gameLoaded = false;
+    //bool gameSaved = false;
     bool monSet = false;
-    FILE *f;
+    //FILE *f;
 
     //printf("%s\n", findFilePath());
     if(argc >= 2){
         for(i = 1; i < argc; i++){
-            if(!strcmp(argv[i], "--load")){
+            /* if(!strcmp(argv[i], "--load")){
                 if(!(f = fopen(findFilePath(), "rb"))){ //"/cygdrive/u/spring2021/COMS 327/Homework 1.02/CS327-Assignment1/samples/welldone.rlg327"
-                    fprintf(stderr, "Failed to open file for reading");
+                    //fprintf(stderr, "Failed to open file for reading");
                     return -1;
                 }
                 loadGame(f, &d);
-                gameLoaded = true;
+                //gameLoaded = true;
                 break;
-            }
+            } */
+            /* if(!strcmp(argv[i], "--save")){
+                if(!(f = fopen(findFilePath(), "wb"))){
+                    //fprintf(stderr, "Failed to open file for writing");
+                    return -1;
+                }
+                gameSaved = true;
+                break;
+            } */
             if(!strcmp(argv[i], "--nummon")){
                 if(argv[i + 1] == NULL || !strcmp(argv[i + 1], "--load") || !strcmp(argv[i + 1], "--save")){
-                    fprintf(stderr, "--nummon doesn't have an entered value");
+                    //fprintf(stderr, "--nummon doesn't have an entered value");
                     exit(1);
                 }
                 // Finding number of characters and allocating memory
@@ -158,61 +171,302 @@ int main(int argc, char *argv[])
             }
         }
     }
-
+   
     if (!monSet) {
         d.numMon = defaultMonNum;
-    }
+    } 
 
     if(!gameLoaded){
         gameGen(&d);
     }
+    runGame(&d);
+
+    /* if(gameSaved){
+        saveGame(&d);
+    } */
     
-    dijkstra(&d, "non-tunneling");
-    dijkstra(&d, "tunneling");
-    monsterGen(&d);
-    printGame(&d);
-    
+    dungeonDelete(d);
+    return 0;
+}
+
+/*****************************************
+ *               Run Game                *
+ *****************************************/
+void runGame(dungeon *d)
+{
+    character *pc;
+    int entityCount, y, x, key;
+
     while(1){
+        key = getch();
         entityCount = 0;
-        gameRunner(&d);
+        switch (key) {
+            case KEY_HOME:                  // 
+                clear();
+                mvprintw(0, 0, "Home");
+                refresh();
+                break;
+            case KEY_UP:                    //
+                clear();
+                mvprintw(0, 0, "Up");
+                refresh();
+                break;
+            case KEY_PPAGE:                 //
+                clear();
+                mvprintw(0, 0, "PPage");
+                refresh();
+                break;
+            case KEY_RIGHT:                 //
+                clear();
+                mvprintw(0, 0, "Right");
+                refresh();
+                break;
+            case KEY_NPAGE:                 // 
+                clear();
+                mvprintw(0, 0, "NPage");
+                refresh();
+                break;
+            case KEY_DOWN:                  // Down
+                clear();
+                mvprintw(0, 0, "Down");
+                refresh();
+                break;
+            case KEY_END:                   //
+                clear();
+                mvprintw(0, 0, "End");
+                refresh();
+                break;
+            case KEY_LEFT:                  // Left
+                clear();
+                mvprintw(0, 0, "Left");
+                refresh();
+                break;
+            case KEY_B2:                    //
+                clear();
+                mvprintw(0, 0, "B2");
+                refresh();
+                break;
+            case ' ':                       // Rest 
+                
+                break;
+            case '>':                       // Go Down Stairs
+                pc = findPC(d);
+                if(d->floor[pc->y][pc->x] == downChar) {   
+                    gameGen(d);
+                    break;
+                }
+                mvprintw(0, 0, "You have to be on a down staircase to do that!");
+                refresh();
+                break;
+            case '<':                       // Go Up Stairs
+                pc = findPC(d);
+                if(d->floor[pc->y][pc->x] == upChar) {   
+                    gameGen(d);
+                    break;
+                }
+                mvprintw(0, 0, "You have to be on an up staircase to do that!");
+                refresh();
+                break;
+            case '.':                       // Rest
+                
+                break;
+            case '1':                       //
+                movePC(d, 1, -1);
+                break;
+            case '2':                       //
+                movePC(d, 1, 0);
+                break;
+            case '3':                       //
+                movePC(d, 1, 1);
+                break;
+            case '4':                       //
+                movePC(d, 0, -1);
+                break;
+            case '5':                       // Rest
+                
+                break;
+            case '6':                       //
+                movePC(d, 0, 1);
+                break;
+            case '7':                       //
+                movePC(d, -1, -1);
+                break;
+            case '8':                       //
+                movePC(d, -1, 0);
+                break;
+            case '9':                       //
+                movePC(d, -1, 1);
+                break;
+            case 'b':                       //
+                movePC(d, 1, -1);
+                break;
+            case 'c':                       //
+                clear();
+                mvprintw(0, 0, "c");
+                refresh();
+                break;
+            case 'd':                       //
+                clear();
+                mvprintw(0, 0, "d");
+                refresh();
+                break;
+            case 'e':
+                clear();
+                mvprintw(0, 0, "e");
+                refresh();
+                break;
+            case 'f':
+                clear();
+                mvprintw(0, 0, "f");
+                refresh();
+                break;
+            case 'g':
+                clear();
+                mvprintw(0, 0, "g");
+                refresh();
+                break;
+            case 'h':
+                movePC(d, 0, -1);
+                break;
+            case 'i':
+                clear();
+                mvprintw(0, 0, "i");
+                refresh();
+                break;
+            case 'j':
+                movePC(d, 1, 0);
+                break;
+            case 'k':
+                movePC(d, -1, 0);
+                break;
+            case 'l':
+                movePC(d, 0, 1);
+                break;
+            case 'm':
+                clear();
+                mvprintw(0, 0, "m");
+                refresh();
+                break;
+            case 'n':
+                movePC(d, 1, 1);
+                break;
+            case 's':
+                clear();
+                mvprintw(0, 0, "s");
+                refresh();
+                break;
+            case 't':
+                clear();
+                mvprintw(0, 0, "t");
+                refresh();
+                break;
+            case 'u':
+                movePC(d, -1, 1);
+                break;
+            case 'w':
+                clear();
+                mvprintw(0, 0, "w");
+                refresh();
+                break;
+            case 'x':
+                clear();
+                mvprintw(0, 0, "x");
+                refresh();
+                break;
+            case 'y':
+                movePC(d, -1, -1);
+                break;
+            case 'D':
+                clear();
+                mvprintw(0, 0, "D");
+                refresh();
+                break;
+            case 'E':
+                clear();
+                mvprintw(0, 0, "E");
+                refresh();
+                break;
+            case 'H':
+                clear();
+                mvprintw(0, 0, "H");
+                refresh();
+                break;
+            case 'I':
+                clear();
+                mvprintw(0, 0, "I");
+                refresh();
+                break;
+            case 'L':
+                clear();
+                mvprintw(0, 0, "L");
+                refresh();
+                break;
+            case 'Q':                   // Quit
+                endwin();
+                return;
+                break;
+            case 'T':
+                clear();
+                mvprintw(0, 0, "T");
+                refresh();
+                break;
+            default:
+                mvprintw(23, 1, "Unknown key: %o", key);
+                refresh();
+        }
+        gameRunner(d);
         //check for pc and monsters
         for(y = 0; y < floorMaxY; y++){
             for(x = 0; x < floorMaxX; x++){
-                if(d.charMap[y][x].isPC){
-                    if(!d.charMap[y][x].isAlive) {
+                if(d->charMap[y][x].isPC){
+                    if(!d->charMap[y][x].isAlive) {
                         loseGame();
-                        return 0;
+                        return;
                     }
                 }
-                if(d.charMap[y][x].isAlive){
+                if(d->charMap[y][x].isAlive){
                     entityCount++;
                 }
             }
         }
         if(entityCount <= 1){
             winGame();
-            return 0;
+            return;
         }
-        printGame(&d);
-        usleep(10000 * 60);
-        dijkstra(&d, "non-tunneling");
-        dijkstra(&d, "tunneling");
+        printGame(d);
+        //usleep(10000 * 60);
+        dijkstra(d, "non-tunneling");
+        dijkstra(d, "tunneling");
     }
+    endwin();
+}
 
-    if(argc >= 2){
-        for(i = 1; i < argc; i++){
-            if(!strcmp(argv[i], "--save")){
-                if(!(f = fopen(findFilePath(), "wb"))){
-                    fprintf(stderr, "Failed to open file for writing");
-                    return -1;
-                }
-                saveGame(f, d);
-                break;
+/*****************************************
+ *            Find the Player            *
+ *****************************************/
+character *findPC(dungeon *d)
+{
+    int x, y;
+    for (y = 0; y < floorMaxY; y++) {
+        for (x = 0; x < floorMaxX; x++) {
+            if (d->charMap[y][x].isPC) {
+                return &d->charMap[y][x];
             }
         }
     }
-    dungeonDelete(d);
-    return 0;
+    return NULL;
+}
+
+/*****************************************
+ *          nCurses Generator            *
+ *****************************************/
+void terminalInit() 
+{
+    initscr();
+    raw();
+    noecho();
+    curs_set(0);
+    keypad(stdscr, TRUE);
 }
 
 /*****************************************
@@ -237,6 +491,12 @@ void gameGen(dungeon *d)
     corridorGen(d); 
     staircaseGen(d);
     playerGen(d);
+    dijkstra(d, "non-tunneling");
+    dijkstra(d, "tunneling");
+    monsterGen(d);
+    terminalInit();
+    printGame(d);
+    refresh();
     //printGame(d); // Needs to be last in function // Put in main because of monsters
 }
 
@@ -423,7 +683,6 @@ void playerGen(dungeon *d) {
             d->charMap[ranY][ranX].isAlive = 1;
             d->charMap[ranY][ranX].speed = 10;
             d->charMap[ranY][ranX].sequenceNum = 0;
-            d->floor[ranY][ranX] = playerChar;
             placed = true;
         }
     }
@@ -483,14 +742,6 @@ static int32_t monster_cmp(const void *first, const void *second) {
         return f->nTurn - s->nTurn;
     }
 }
-char *print_int(const void *v)
-{
-  static char out[640];
-
-  snprintf(out, 640, "%x", *((int *) v));
-
-  return out;
-}
 
 /*****************************************
  *             Game Runnner              *
@@ -526,6 +777,7 @@ void gameRunner(dungeon *d)
     }
 
     while((c = heap_remove_min(&h))){
+        //printf("x:%d y:%d speed:%d nTurn:%d, sNum:%d type:%x alive:%d\n", c->x, c->y, c->speed, c->nTurn, c->sequenceNum, c->entity.nonPlayer.type, c->isAlive);
         c->hn = NULL;
         bool isSmart = false;
         bool isTele = false;
@@ -774,7 +1026,7 @@ void gameRunner(dungeon *d)
             }
  
             if(c->isAlive){
-                printf("x:%d y:%d speed:%d nTurn:%d, sNum:%d type:%x alive:%d\n", c->x, c->y, c->speed, c->nTurn, c->sequenceNum, c->entity.nonPlayer.type, c->isAlive);
+                //printf("x:%d y:%d speed:%d nTurn:%d, sNum:%d type:%x alive:%d\n", c->x, c->y, c->speed, c->nTurn, c->sequenceNum, c->entity.nonPlayer.type, c->isAlive);
                 if(c->isPC) {
                      c->nTurn = c->nTurn + (1000 / c->speed);
                     heap_insert(&h, c);
@@ -789,6 +1041,47 @@ void gameRunner(dungeon *d)
 }
 
 /*****************************************
+ *            Monster Mover              *
+ *****************************************/
+void moveMonst()
+{
+    //implement to shorted the monster ai.
+}
+
+/*****************************************
+ *             Player Mover              *
+ *****************************************/
+void movePC(dungeon *d, int yOff, int xOff)
+{
+    int y, x, oldY, oldX, tempY, tempX;
+    character *pc; 
+
+    for(y = 0; y < floorMaxY; y++){
+        for(x = 0; x < floorMaxX; x++){
+            if(d->charMap[y][x].isPC)
+                pc = &d->charMap[y][x];
+        }
+    }
+    
+    tempY = yOff + pc->y;
+    tempX = xOff + pc->x;
+    if(d->floor[tempY][tempX] == rockChar)
+        return;
+    oldY = pc->y;
+    oldX = pc->x;
+    pc->y = tempY;
+    pc->x = tempX;
+    d->charMap[tempY][tempX] = *pc;
+    d->charMap[oldY][oldX].y = oldY;
+    d->charMap[oldY][oldX].x = oldX;
+    d->charMap[oldY][oldX].speed = 0;
+    d->charMap[oldY][oldX].nTurn = 0;
+    d->charMap[oldY][oldX].isPC = 0;
+    d->charMap[oldY][oldX].isAlive = 0;
+    d->charMap[oldY][oldX].sequenceNum = 0;
+    d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
+}
+/*****************************************
  *        Corridor Path Compare          *
  *****************************************/
 static int32_t corridor_path_cmp(const void *key, const void *with) 
@@ -801,7 +1094,7 @@ static int32_t corridor_path_cmp(const void *key, const void *with)
  *****************************************/
 void winGame()
 {
-    printf("\n YOU WIN \n");
+    mvprintw(23, 35, "YOU WIN");
 }
 
 /*****************************************
@@ -809,7 +1102,7 @@ void winGame()
  *****************************************/
 void loseGame()
 {
-    printf("\n YOU LOSE \n");
+    mvprintw(23, 35, "YOU LOSE");
 }
 
 /*****************************************
@@ -942,7 +1235,7 @@ void dijkstra(dungeon *d, char str[])
             }
         }
     }
-    printMap(d);
+    //printMap(d);
 }
 
 /*****************************************
@@ -1162,14 +1455,20 @@ void printGame(dungeon *d)
     for(y = 0; y < floorMaxY; y++){ 
         for(x = 0; x < floorMaxX; x++){
             if (d->charMap[y][x].isAlive && !d->charMap[y][x].isPC) {
-                printf("%x", d->charMap[y][x].entity.nonPlayer.type);
+                //printf("%x", d->charMap[y][x].entity.nonPlayer.type);
+                mvprintw(1 + y, x, "%x", d->charMap[y][x].entity.nonPlayer.type);
+            } else if (d->charMap[y][x].isPC && d->charMap[y][x].isAlive) {
+                mvprintw(1 + y, x, "%c", playerChar);
+                //printf("%c", playerChar);
             } else {
-                printf("%c", d->floor[y][x]);
+                //printf("%c", d->floor[y][x]);
+                mvprintw(1 + y, x, "%c", d->floor[y][x]);
             }
         }
-        printf("\n");
+        //printf("\n");
     }
-    printf("\n");
+    //printf("\n");
+    refresh();
 }
 
 /*****************************************
