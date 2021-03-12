@@ -124,7 +124,7 @@ void saveGame(FILE *f, dungeon d);
 void loadGame(FILE *f, dungeon *d);
 void printGame(dungeon *d);
 void printMap(dungeon *d);
-void dungeonDelete(dungeon d);
+void dungeonDelete(dungeon *d);
 
 /*****************************************
  *                Main                   *
@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
         saveGame(&d);
     } */
     
-    dungeonDelete(d);
+    dungeonDelete(&d);
     return 0;
 }
 
@@ -203,58 +203,51 @@ void runGame(dungeon *d)
     while(1){
         key = getch();
         entityCount = 0;
+        printGame(d);
         switch (key) {
             case KEY_HOME:                  // 
-                clear();
                 mvprintw(0, 0, "Home");
                 refresh();
-                break;
+                continue;
             case KEY_UP:                    //
-                clear();
                 mvprintw(0, 0, "Up");
                 refresh();
-                break;
+                continue;
             case KEY_PPAGE:                 //
-                clear();
                 mvprintw(0, 0, "PPage");
                 refresh();
-                break;
+                continue;
             case KEY_RIGHT:                 //
-                clear();
                 mvprintw(0, 0, "Right");
                 refresh();
-                break;
+                continue;
             case KEY_NPAGE:                 // 
-                clear();
                 mvprintw(0, 0, "NPage");
                 refresh();
-                break;
+                continue;
             case KEY_DOWN:                  // Down
-                clear();
                 mvprintw(0, 0, "Down");
                 refresh();
-                break;
+                continue;
             case KEY_END:                   //
-                clear();
                 mvprintw(0, 0, "End");
                 refresh();
-                break;
+                continue;
             case KEY_LEFT:                  // Left
-                clear();
                 mvprintw(0, 0, "Left");
                 refresh();
-                break;
+                continue;
             case KEY_B2:                    //
-                clear();
                 mvprintw(0, 0, "B2");
                 refresh();
-                break;
+                continue;
             case ' ':                       // Rest 
                 
                 break;
             case '>':                       // Go Down Stairs
                 pc = findPC(d);
-                if(d->floor[pc->y][pc->x] == downChar) {   
+                if(d->floor[pc->y][pc->x] == downChar) {
+                    //dungeonDelete(d);   
                     gameGen(d);
                     break;
                 }
@@ -263,7 +256,8 @@ void runGame(dungeon *d)
                 break;
             case '<':                       // Go Up Stairs
                 pc = findPC(d);
-                if(d->floor[pc->y][pc->x] == upChar) {   
+                if(d->floor[pc->y][pc->x] == upChar) {
+                    //dungeonDelete(d);   
                     gameGen(d);
                     break;
                 }
@@ -304,38 +298,32 @@ void runGame(dungeon *d)
                 movePC(d, 1, -1);
                 break;
             case 'c':                       //
-                clear();
                 mvprintw(0, 0, "c");
                 refresh();
-                break;
+                continue;
             case 'd':                       //
-                clear();
                 mvprintw(0, 0, "d");
                 refresh();
-                break;
+                continue;
             case 'e':
-                clear();
                 mvprintw(0, 0, "e");
                 refresh();
-                break;
+                continue;
             case 'f':
-                clear();
                 mvprintw(0, 0, "f");
                 refresh();
-                break;
+                continue;
             case 'g':
-                clear();
                 mvprintw(0, 0, "g");
                 refresh();
-                break;
+                continue;
             case 'h':
                 movePC(d, 0, -1);
                 break;
             case 'i':
-                clear();
                 mvprintw(0, 0, "i");
                 refresh();
-                break;
+                continue;
             case 'j':
                 movePC(d, 1, 0);
                 break;
@@ -347,74 +335,66 @@ void runGame(dungeon *d)
                 break;
             case 'm':
                 makeMonstList(d);
-                break;
+                clear();
+                printGame(d);
+                continue;
             case 'n':
                 movePC(d, 1, 1);
                 break;
             case 's':
-                clear();
                 mvprintw(0, 0, "s");
                 refresh();
-                break;
+                continue;
             case 't':
-                clear();
                 mvprintw(0, 0, "t");
                 refresh();
-                break;
+                continue;
             case 'u':
                 movePC(d, -1, 1);
                 break;
             case 'w':
-                clear();
                 mvprintw(0, 0, "w");
                 refresh();
-                break;
+                continue;
             case 'x':
-                clear();
                 mvprintw(0, 0, "x");
                 refresh();
-                break;
+                continue;
             case 'y':
                 movePC(d, -1, -1);
                 break;
             case 'D':
-                clear();
                 mvprintw(0, 0, "D");
                 refresh();
-                break;
+                continue;
             case 'E':
-                clear();
                 mvprintw(0, 0, "E");
                 refresh();
-                break;
+                continue;
             case 'H':
-                clear();
                 mvprintw(0, 0, "H");
                 refresh();
-                break;
+                continue;
             case 'I':
-                clear();
                 mvprintw(0, 0, "I");
                 refresh();
-                break;
+                continue;
             case 'L':
-                clear();
                 mvprintw(0, 0, "L");
                 refresh();
-                break;
+                continue;
             case 'Q':                   // Quit
                 endwin();
                 return;
                 break;
             case 'T':
-                clear();
                 mvprintw(0, 0, "T");
                 refresh();
-                break;
+                continue;
             default:
                 mvprintw(23, 1, "Unknown key: %o", key);
                 refresh();
-                break;
+                continue;
         }
         gameRunner(d);
         //check for pc and monsters
@@ -530,41 +510,46 @@ void makeMonstList(dungeon *d)
     myWin = newwin(height, width, startY, startX);
     keypad(myWin, TRUE);
     scrollok(myWin, TRUE);
-    //wprintw(myWin, "Press Escape to exit.");
-    //wprintw(myWin, "Use the up and down arrows to scroll the list up and down, respectively.");
+    
     box(myWin, 0, 0);
     wrefresh(myWin);
 
-    for(i = 0; i < 17; i++) {
-        mvwprintw(myWin, i + 1, 1, "%s", list[i]);
+    for(i = 0; i < 15; i++) {
+        mvwprintw(myWin, i + 2, 1, "%s", list[i]);
     }
+    mvwprintw(myWin, 1, 1, "Press Escape to exit.");
+    mvwprintw(myWin, 17, 1, "Arrows to Scroll. ESC to continue.");
     wrefresh(myWin);
-    
+
     while((ch = wgetch(myWin)) != 27) {
         switch (ch) {
             case KEY_DOWN:
-                if(offset + 17 < d->numMon){
-                    offset += 17;
+                if(offset + 15 < d->numMon){
+                    offset += 15;
                     wclear(myWin);
                     box(myWin, 0, 0);
-                    for(i = offset; i < offset + 17; i++) {
+                    for(i = offset; i < offset + 15; i++) {
                         if (i < numAlive) {
-                            mvwprintw(myWin, i - offset + 1, 1, "%s", list[i]);
+                            mvwprintw(myWin, i - offset + 2, 1, "%s", list[i]);
                         }
                     }
+                    mvwprintw(myWin, 1, 1, "Press Escape to exit.");
+                    mvwprintw(myWin, 17, 1, "Arrows to Scroll. ESC to continue.");
                 }             
                 wrefresh(myWin);
                 break; 
             case KEY_UP:
-                if(offset - 17 >= 0){
-                    offset -= 17;
+                if(offset - 15 >= 0){
+                    offset -= 15;
                     wclear(myWin);
                     box(myWin, 0, 0);
-                    for(i = offset; i < offset + 17; i++) {
+                    for(i = offset; i < offset + 15; i++) {
                         if (i < numAlive) {
-                            mvwprintw(myWin, i - offset + 1, 1, "%s", list[i]);
+                            mvwprintw(myWin, i - offset + 2, 1, "%s", list[i]);
                         }
                     }
+                    mvwprintw(myWin, 1, 1, "Press Escape to exit.");
+                    mvwprintw(myWin, 17, 1, "Arrows to Scroll. ESC to continue.");
                 }
                 wrefresh(myWin); 
                 break;
@@ -572,7 +557,6 @@ void makeMonstList(dungeon *d)
     }
     delwin(myWin);
     free(list);
-    refresh();
 }
 
 /*****************************************
@@ -631,7 +615,6 @@ void gameGen(dungeon *d)
     terminalInit();
     printGame(d);
     refresh();
-    //printGame(d); // Needs to be last in function // Put in main because of monsters
 }
 
 /*****************************************
@@ -891,7 +874,7 @@ void gameRunner(dungeon *d)
    
     for(y = 0; y < floorMaxY; y++){
         for(x = 0; x < floorMaxX; x++){
-            if(d->charMap[y][x].isPC) {
+            if(d->charMap[y][x].isPC && d->charMap[y][x].isAlive) {
                 d->charMap[y][x].hn = heap_insert(&h, &d->charMap[y][x]);
             }
             else 
@@ -1368,6 +1351,7 @@ void dijkstra(dungeon *d, char str[])
             }
         }
     }
+    free(p);
     //printMap(d);
 }
 
@@ -1631,9 +1615,9 @@ void printMap(dungeon *d)
 /*****************************************
  *           Dungeon Deletor             *
  *****************************************/
-void dungeonDelete(dungeon d)
+void dungeonDelete(dungeon *d)
 {
-    free(d.roomList);
-    free(d.stairListU);
-    free(d.stairListD);
+    free(d->roomList);
+    free(d->stairListU);
+    free(d->stairListD);
 }
