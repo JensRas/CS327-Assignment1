@@ -32,7 +32,7 @@
 #define playerChar   '@'
 #define dimY          0
 #define dimX          1   
-#define defaultMonNum 10 
+#define defaultMonNum 30 
 #define BIT_SMART     0x1
 #define BIT_TELE      0x2
 #define BIT_TUN       0x4  
@@ -60,6 +60,7 @@ typedef struct npc {
     int8_t type;
     int8_t knownPCX;
     int8_t knownPCY;
+    char *adj;
 } npc; 
 
 typedef struct character {
@@ -103,6 +104,8 @@ typedef struct dungeon {
  *****************************************/
 void runGame(dungeon *d);
 character *findPC(dungeon *d);
+char *nameMonst();
+void makeMonstList(dungeon *d);
 void terminalInit();
 void gameGen(dungeon *d);
 void corridorGen(dungeon *d);
@@ -343,9 +346,7 @@ void runGame(dungeon *d)
                 movePC(d, 0, 1);
                 break;
             case 'm':
-                clear();
-                mvprintw(0, 0, "m");
-                refresh();
+                makeMonstList(d);
                 break;
             case 'n':
                 movePC(d, 1, 1);
@@ -413,6 +414,7 @@ void runGame(dungeon *d)
             default:
                 mvprintw(23, 1, "Unknown key: %o", key);
                 refresh();
+                break;
         }
         gameRunner(d);
         //check for pc and monsters
@@ -439,6 +441,138 @@ void runGame(dungeon *d)
         dijkstra(d, "tunneling");
     }
     endwin();
+}
+
+/*****************************************
+ *             Monster Namer             *
+ *****************************************/
+char *nameMonst()
+{
+    int s1;
+    s1 = rand() % 16;
+
+    switch(s1){
+        case 0:
+            return "deadly";
+        case 1: 
+            return "forsaken";
+        case 2:
+            return "lovable";
+        case 3:        
+            return "puny";
+        case 4:
+            return "ridiculous";
+        case 5:
+            return "shocking";
+        case 6:     
+            return "shy";
+        case 7:      
+            return "almighty";
+        case 8:            
+            return "brash";
+        case 9:            
+            return "bored";
+        case 10:             
+            return "aggressive";
+        case 11:             
+            return "charming";
+        case 12:            
+            return "jaded";
+        case 13:             
+            return "furious";
+        case 14:             
+            return "weak";
+        case 15:            
+            return "clever";
+        default:
+            return "error";
+    }
+}
+
+/*****************************************
+ *             Monster List              *
+ *****************************************/
+void makeMonstList(dungeon *d)
+{
+    WINDOW *myWin;
+    int startY, startX, width, height, ch, i, y, x, offset, yDiff, xDiff;
+    int numAlive = 0;
+    for(y = 0; y < floorMaxY; y++){
+        for(x = 0; x < floorMaxX; x++){
+            if(d->charMap[y][x].isAlive && !d->charMap[y][x].isPC)
+                numAlive++;
+        }
+    }
+    char **list = malloc(numAlive * sizeof(char *));
+    height = 19;
+    width = 40;
+    startY = 2;
+    startX = 21;
+    i = 0, offset = 0, yDiff = 0, xDiff = 0;
+    char *nors;
+    char *eorw;
+    character *pc = findPC(d);
+
+    for(y = 0; y < floorMaxY; y++){
+        for(x = 0; x < floorMaxX; x++){
+            if(d->charMap[y][x].isAlive && !d->charMap[y][x].isPC){
+                yDiff = (pc->y - d->charMap[y][x].y > 0) ?  pc->y - d->charMap[y][x].y : d->charMap[y][x].y - pc->y;
+                xDiff = (pc->x - d->charMap[y][x].x > 0) ?  pc->x - d->charMap[y][x].x : d->charMap[y][x].x - pc->x;
+                nors = (pc->y - d->charMap[y][x].y > 0) ? "North" : "South";
+                eorw = (pc->x - d->charMap[y][x].x > 0) ? "West" : "East";
+                list[i] = malloc(15 + 2 + 2 + 5 + 4 + 11 + 1); //yDiff: 2, xDiff: 2, nors: 5, eorw: 4, spaces: 11, null term 1 
+                sprintf(list[i], "A %-11s %x: %2d %s by %2d %s", d->charMap[y][x].entity.nonPlayer.adj, d->charMap[y][x].entity.nonPlayer.type, yDiff, nors, xDiff, eorw);
+                i++;
+            } 
+        }
+    }
+
+    myWin = newwin(height, width, startY, startX);
+    keypad(myWin, TRUE);
+    scrollok(myWin, TRUE);
+    //wprintw(myWin, "Press Escape to exit.");
+    //wprintw(myWin, "Use the up and down arrows to scroll the list up and down, respectively.");
+    box(myWin, 0, 0);
+    wrefresh(myWin);
+
+    for(i = 0; i < 17; i++) {
+        mvwprintw(myWin, i + 1, 1, "%s", list[i]);
+    }
+    wrefresh(myWin);
+    
+    while((ch = wgetch(myWin)) != 27) {
+        switch (ch) {
+            case KEY_DOWN:
+                if(offset + 17 < d->numMon){
+                    offset += 17;
+                    wclear(myWin);
+                    box(myWin, 0, 0);
+                    for(i = offset; i < offset + 17; i++) {
+                        if (i < numAlive) {
+                            mvwprintw(myWin, i - offset + 1, 1, "%s", list[i]);
+                        }
+                    }
+                }             
+                wrefresh(myWin);
+                break; 
+            case KEY_UP:
+                if(offset - 17 >= 0){
+                    offset -= 17;
+                    wclear(myWin);
+                    box(myWin, 0, 0);
+                    for(i = offset; i < offset + 17; i++) {
+                        if (i < numAlive) {
+                            mvwprintw(myWin, i - offset + 1, 1, "%s", list[i]);
+                        }
+                    }
+                }
+                wrefresh(myWin); 
+                break;
+        }    
+    }
+    delwin(myWin);
+    free(list);
+    refresh();
 }
 
 /*****************************************
@@ -688,8 +822,6 @@ void playerGen(dungeon *d) {
     }
 }
 
-// Make an instance of priority queue, fill with character pointers, sort by next turn
-
 /*****************************************
  *          Monster Generator            *
  *****************************************/
@@ -727,6 +859,7 @@ void monsterGen(dungeon *d) {
         d->charMap[ranY][ranX].sequenceNum = i + 1;
         d->charMap[ranY][ranX].entity.nonPlayer.knownPCX = 0;
         d->charMap[ranY][ranX].entity.nonPlayer.knownPCY = 0;
+        d->charMap[ranY][ranX].entity.nonPlayer.adj = nameMonst();
     }
 }
 
@@ -1239,7 +1372,7 @@ void dijkstra(dungeon *d, char str[])
 }
 
 /*****************************************
- *           File Path Finder            *
+ *            Swap Character             *
  *****************************************/
 void characterSwap(character *old, character *new)
 {
