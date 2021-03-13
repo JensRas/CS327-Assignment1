@@ -24,3 +24,4 @@ Assignment 1.04
 Assignment 1.05 
 3/9/21 7:15 PM JCR JTG TOM: Created an initializer for the NCurses screen, adapter printGame to work with NCurses, added keys for movement and extra functionality.
 3/11/21 6:15 PM JCR JTG TOM: Added a window for the monster list and added functionality for the up, down, and escape keys.
+3/12/21 4:30 PM JCR TOM: Refactored project to seperate files with new make file still WIP
