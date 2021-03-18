@@ -5,6 +5,7 @@
 
 #include "dungeon.h"
 #include "save_load.h"
+#include "printers.h"
 /*****************************************
  *           File Path Finder            *
  *****************************************/

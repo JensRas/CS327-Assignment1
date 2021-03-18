@@ -1,7 +1,7 @@
 #ifndef PRINTERS_H
 #define PRINTERS_H
 
-typedef struct dungeon d;
+typedef struct dungeon dungeon;
 typedef struct pc pc;
 typedef struct character character;
 

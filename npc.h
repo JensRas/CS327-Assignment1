@@ -9,7 +9,7 @@
 #define BIT_TUN       0x4
 #define BIT_ERAT      0x8
 
-typedef struct dungeon d;
+typedef struct dungeon dungeon;
 typedef struct character character;
 
 typedef struct npc {

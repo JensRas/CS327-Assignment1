@@ -11,6 +11,7 @@
 #include "npc.h"
 #include "pc.h"
 #include "pathfinder.h"
+#include "printers.h"
 
 /*****************************************
  *           Border Generator            *
@@ -196,5 +197,5 @@ void gameGen(dungeon *d)
     monsterGen(d);
     terminalInit();
     printGame(d);
-    refresh();
+    //refresh();
 }

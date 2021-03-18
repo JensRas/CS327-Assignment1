@@ -2,6 +2,8 @@
 #define DUNGEON_H
 
 #include "heap.h"
+#include "pc.h"
+#include "npc.h"
 
 #define minRoomNumber  6
 #define maxRoomNumber 10

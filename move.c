@@ -8,6 +8,9 @@
 #include "pc.h"
 #include "npc.h"
 #include "pathfinder.h"
+#include "printers.h"
+
+static int32_t monster_cmp(const void *first, const void *second);
 
 /*****************************************
  *             Game Runnner              *
