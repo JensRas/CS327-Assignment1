@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
     d.stairListD = NULL;
     int i;
     bool monSet = false;
+    memset(&d, 0, sizeof d);
 
     if(argc >= 2){
         for(i = 1; i < argc; i++){

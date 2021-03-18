@@ -15,7 +15,7 @@ static int32_t monster_cmp(const void *first, const void *second);
 /*****************************************
  *             Game Runnner              *
  *****************************************/
-void gameRunner(dungeon *d)
+void gameRunner(dungeon *d) // This is the problem!!!
 {
     character *c;
     heap_t h; 
@@ -75,11 +75,6 @@ void gameRunner(dungeon *d)
             c->entity.nonPlayer.knownPCY = 0;
         }
         
-        if(isTele){
-            c->entity.nonPlayer.knownPCX = realPCY;
-            c->entity.nonPlayer.knownPCY = realPCX;        
-        }
-        
         pcRoom = -1;
         for(i = 0; i < d->numRooms; i++){
             for(y = d->roomList[i].cornerY; y < d->roomList[i].sizeY; y++){
@@ -89,13 +84,23 @@ void gameRunner(dungeon *d)
                 }
             }
         }
-        for(y = d->roomList[pcRoom].cornerY; y < d->roomList[pcRoom].sizeY; y++){
-            for(x = d->roomList[pcRoom].cornerX; x < d->roomList[pcRoom].sizeX; x++){
-                if(c->x == x && c->y == y){
-                    c->entity.nonPlayer.knownPCY = realPCY;
-                    c->entity.nonPlayer.knownPCX = realPCX;
+        if(pcRoom == -1){
+            for(y = d->roomList[pcRoom].cornerY; y < d->roomList[pcRoom].sizeY; y++){
+                for(x = d->roomList[pcRoom].cornerX; x < d->roomList[pcRoom].sizeX; x++){
+                    if(c->x == x && c->y == y){
+                        c->entity.nonPlayer.knownPCY = realPCY;
+                        c->entity.nonPlayer.knownPCX = realPCX;
+                    }
                 }
             }
+        } else {
+            c->entity.nonPlayer.knownPCX = 0;
+            c->entity.nonPlayer.knownPCY = 0;
+        }
+
+        if(isTele){
+            c->entity.nonPlayer.knownPCX = realPCY;
+            c->entity.nonPlayer.knownPCY = realPCX;        
         }
         
         int temp = 100;
