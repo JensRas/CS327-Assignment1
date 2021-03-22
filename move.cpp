@@ -1,5 +1,5 @@
-#include <stdint.h>
-#include <stdlib.h>
+#include <cstdint>
+#include <cstdlib>
 #include <ncurses.h>
 
 #include "move.h"
@@ -45,7 +45,7 @@ void gameRunner(dungeon *d) // This is the problem!!!
         }
     }
 
-    while((c = heap_remove_min(&h))){
+    while((c = (character*) heap_remove_min(&h))){
         //printf("x:%d y:%d speed:%d nTurn:%d, sNum:%d type:%x alive:%d\n", c->x, c->y, c->speed, c->nTurn, c->sequenceNum, c->entity.nonPlayer.type, c->isAlive);
         c->hn = NULL;
         bool isSmart = false;
@@ -70,11 +70,13 @@ void gameRunner(dungeon *d) // This is the problem!!!
                 isErat = true;
         }
 
+        // This is probably broken
         if(!isSmart){
             c->entity.nonPlayer.knownPCX = 0;
             c->entity.nonPlayer.knownPCY = 0;
         }
         
+        // If PC is in a corridor this breaks
         pcRoom = -1;
         for(i = 0; i < d->numRooms; i++){
             for(y = d->roomList[i].cornerY; y < d->roomList[i].sizeY; y++){
@@ -84,7 +86,7 @@ void gameRunner(dungeon *d) // This is the problem!!!
                 }
             }
         }
-        if(pcRoom == -1){
+        if(pcRoom != -1){
             for(y = d->roomList[pcRoom].cornerY; y < d->roomList[pcRoom].sizeY; y++){
                 for(x = d->roomList[pcRoom].cornerX; x < d->roomList[pcRoom].sizeX; x++){
                     if(c->x == x && c->y == y){
@@ -100,7 +102,7 @@ void gameRunner(dungeon *d) // This is the problem!!!
 
         if(isTele){
             c->entity.nonPlayer.knownPCX = realPCY;
-            c->entity.nonPlayer.knownPCY = realPCX;        
+            c->entity.nonPlayer.knownPCY = realPCX;    
         }
         
         int temp = 100;
@@ -528,8 +530,8 @@ void runGame(dungeon *d)
         }
         printGame(d);
         //usleep(10000 * 60);
-        dijkstra(d, "non-tunneling");
-        dijkstra(d, "tunneling");
+        dijkstra(d, 0);
+        dijkstra(d, 1);
     }
     endwin();
 }

@@ -1,6 +1,7 @@
 {
     "C_Cpp.errorSquiggles": "Disabled",
     "files.associations": {
-        "pathfinder.h": "c"
+        "pathfinder.h": "c",
+        "cstring": "cpp"
     }
 }

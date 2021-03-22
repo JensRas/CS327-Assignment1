@@ -1,10 +1,9 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <endian.h>
-#include <limits.h>
+#include <cstdio>
+#include <cstdint>
+#include <cstdlib>
+#include <cstdbool>
+#include <cstring>
+#include <climits>
 
 #include "dungeon.h"
 #include "heap.h"
@@ -177,23 +176,23 @@ void gameGen(dungeon *d)
 {
     // Finding number of rooms and allocating memory
     d->numRooms = (rand() % ((maxRoomNumber + 1) - minRoomNumber)) + minRoomNumber;
-    d->roomList = calloc(d->numRooms , sizeof(room));
+    d->roomList = (room*)calloc(d->numRooms , sizeof(room));
     // Finding number of up stairs and allocating memory
     d->numUStairs = ((rand() % d->numRooms) / 3);
     d->numUStairs = (d->numUStairs < 1) ? 1 : d->numUStairs;
-    d->stairListU = calloc(d->numUStairs , sizeof(stair));
+    d->stairListU = (stair*)calloc(d->numUStairs , sizeof(stair));
     // Finding number of down stairs and allocating memory
     d->numDStairs = ((rand() % d->numRooms) / 3);
     d->numDStairs = (d->numDStairs < 1) ? 1 : d->numDStairs;
-    d->stairListD = calloc(d->numDStairs , sizeof(stair));
+    d->stairListD = (stair*)calloc(d->numDStairs , sizeof(stair));
 
     borderGen(d);
     roomGen(d); 
     corridorGen(d); 
     staircaseGen(d);
     playerGen(d);
-    dijkstra(d, "non-tunneling");
-    dijkstra(d, "tunneling");
+    dijkstra(d, 0); // non tunneling
+    dijkstra(d, 1); // tunneling
     monsterGen(d);
     terminalInit();
     printGame(d);

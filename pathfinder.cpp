@@ -1,6 +1,7 @@
-#include <stdlib.h>
-#include <string.h>
-#include <limits.h>
+#include <cstdlib>
+#include <cstring>
+#include <climits>
+#include <string>
 
 #include "dungeon.h"
 #include "heap.h"
@@ -16,7 +17,7 @@ static int32_t corridor_path_cmp(const void *key, const void *with)
 /*****************************************
  *         Dungeon Cost Finder           *
  *****************************************/
-void dijkstra(dungeon *d, char str[]) 
+void dijkstra(dungeon *d, int tunOrNot) 
 {
     static corPath *p;
     static uint32_t initialized = 0;
@@ -49,7 +50,7 @@ void dijkstra(dungeon *d, char str[])
 
     heap_init(&h, corridor_path_cmp, NULL); 
     
-    if(!strcmp(str, "non-tunneling")){
+    if(tunOrNot == 0){ // Non-tunneling
         for (y = 0; y < floorMaxY; y++) {
             for (x = 0; x < floorMaxX; x++) {
                 if (d->floor[y][x] != edgeChar && d->floor[y][x] != rockChar) {
@@ -59,7 +60,7 @@ void dijkstra(dungeon *d, char str[])
                 }
             }
         }
-    } else if(!strcmp(str, "tunneling")){
+    } else if(tunOrNot == 1){ // Tunneling
         for (y = 0; y < floorMaxY; y++) {
             for (x = 0; x < floorMaxX; x++) {
                 if (d->floor[y][x] != edgeChar) {
@@ -73,7 +74,7 @@ void dijkstra(dungeon *d, char str[])
         exit(1);
     }
 
-    while ((p = heap_remove_min(&h))) {
+    while ((p = (corPath*) heap_remove_min(&h))) {
         p->hn = NULL;
         // 4 cases for cardinal directions
         if ((d->path[p->pos[dimY] - 1][p->pos[dimX]    ].hn) &&
@@ -127,7 +128,7 @@ void dijkstra(dungeon *d, char str[])
         }
     }
     
-    if(!strcmp(str, "non-tunneling")){
+    if(tunOrNot == 0){
         for (y = 0; y < floorMaxY; y++) {
             for (x = 0; x < floorMaxX; x++) {
                 if(d->hardness[y][x] == 0) // Room or corridor

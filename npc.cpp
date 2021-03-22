@@ -1,6 +1,7 @@
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include <ncurses.h>
+#include <string>
 
 #include "dungeon.h"
 #include "npc.h"
@@ -56,39 +57,39 @@ char *nameMonst()
 
     switch(s1){
         case 0:
-            return "deadly";
+            return (char*) "deadly";
         case 1: 
-            return "forsaken";
+            return (char*) "forsaken";
         case 2:
-            return "lovable";
+            return (char*) "lovable";
         case 3:        
-            return "puny";
+            return (char*) "puny";
         case 4:
-            return "ridiculous";
+            return (char*) "ridiculous";
         case 5:
-            return "shocking";
+            return (char*) "shocking";
         case 6:     
-            return "shy";
+            return (char*) "shy";
         case 7:      
-            return "almighty";
+            return (char*) "almighty";
         case 8:            
-            return "brash";
+            return (char*) "brash";
         case 9:            
-            return "bored";
+            return (char*) "bored";
         case 10:             
-            return "aggressive";
+            return (char*) "aggressive";
         case 11:             
-            return "charming";
+            return (char*) "charming";
         case 12:            
-            return "jaded";
+            return (char*) "jaded";
         case 13:             
-            return "furious";
+            return (char*) "furious";
         case 14:             
-            return "weak";
+            return (char*) "weak";
         case 15:            
-            return "clever";
+            return (char*) "clever";
         default:
-            return "error";
+            return (char*) "error";
     }
 }
 /*****************************************
@@ -112,7 +113,7 @@ void makeMonstList(dungeon *d)
                 numAlive++;
         }
     }
-    char **list = malloc(numAlive * sizeof(char *));
+    char **list = (char**)malloc(numAlive * sizeof(char *));
     height = 19;
     width = 40;
     startY = 2;
@@ -127,9 +128,9 @@ void makeMonstList(dungeon *d)
             if(d->charMap[y][x].isAlive && !d->charMap[y][x].isPC){
                 yDiff = (pc->y - d->charMap[y][x].y > 0) ?  pc->y - d->charMap[y][x].y : d->charMap[y][x].y - pc->y;
                 xDiff = (pc->x - d->charMap[y][x].x > 0) ?  pc->x - d->charMap[y][x].x : d->charMap[y][x].x - pc->x;
-                nors = (pc->y - d->charMap[y][x].y > 0) ? "North" : "South";
-                eorw = (pc->x - d->charMap[y][x].x > 0) ? "West" : "East";
-                list[i] = malloc(15 + 2 + 2 + 5 + 4 + 11 + 1); //yDiff: 2, xDiff: 2, nors: 5, eorw: 4, spaces: 11, null term 1 
+                nors = (pc->y - d->charMap[y][x].y > 0) ? (char*) "North" : (char*) "South";
+                eorw = (pc->x - d->charMap[y][x].x > 0) ? (char*) "West" : (char*) "East";
+                list[i] = (char*) malloc(15 + 2 + 2 + 5 + 4 + 11 + 1); //yDiff: 2, xDiff: 2, nors: 5, eorw: 4, spaces: 11, null term 1 
                 sprintf(list[i], "A %-11s %x: %2d %s by %2d %s", d->charMap[y][x].entity.nonPlayer.adj, d->charMap[y][x].entity.nonPlayer.type, yDiff, nors, xDiff, eorw);
                 i++;
             } 

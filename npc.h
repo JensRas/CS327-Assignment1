@@ -1,7 +1,8 @@
 #ifndef NPC_H
 #define NPC_H
 
-#include <stdint.h>
+#include <cstdint>
+#include <string>
 
 #define defaultMonNum 30 
 #define BIT_SMART     0x1

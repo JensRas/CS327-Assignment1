@@ -4,6 +4,6 @@
 typedef struct dungeon d;
 
 //static int32_t corridor_path_cmp(const void *key, const void *with);
-void dijkstra(dungeon *d, char str[]);
+void dijkstra(dungeon *d, int tunOrNot);
 
 #endif

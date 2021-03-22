@@ -11,12 +11,17 @@ CXXFLAGS = -Wall -Werror -ggdb -funroll-loops -DTERM=$(TERM)
 LDFLAGS = -lncurses
 
 BIN = rlg327
-OBJS = rlg327.o heap.o dungeon.o save_load.o npc.o pc.o \
+OBJS = rlg327.o dungeon.o npc.o pc.o \
 	   printers.o move.o pathfinder.o
+HEAP = heap.o
 
 all: $(BIN) etags
 
 $(BIN): $(OBJS)
+	@$(ECHO) Linking $@
+	@$(CXX) $^ -o $@ $(LDFLAGS)
+
+$(BIN): $(HEAP)
 	@$(ECHO) Linking $@
 	@$(CC) $^ -o $@ $(LDFLAGS)
 
