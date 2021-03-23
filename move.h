@@ -9,5 +9,6 @@ void runGame(dungeon *d);
 //static int32_t monster_cmp(const void *first, const void *second);
 void winGame();
 void loseGame();
+void updateFog(dungeon *d);
 
 #endif

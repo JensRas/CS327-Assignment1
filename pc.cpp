@@ -3,6 +3,7 @@
 
 #include "dungeon.h"
 #include "pc.h"
+#include "move.h"
 
 /*****************************************
  *           Player Generator            *
@@ -72,6 +73,8 @@ void movePC(dungeon *d, int yOff, int xOff)
     d->charMap[oldY][oldX].isAlive = 0;
     d->charMap[oldY][oldX].sequenceNum = 0;
     d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
+
+    updateFog(d);
 }
 /*****************************************
  *            Find the Player            *

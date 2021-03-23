@@ -22,6 +22,7 @@
 #define playerChar   '@'
 #define dimY          0
 #define dimX          1
+#define fogVision     5
 
 //typedef struct pc pc;
 //typedef struct npc npc;
@@ -44,36 +45,39 @@ typedef struct corPath {
   int32_t cost;
 } corPath;
 
-typedef struct character {
-    heap_node_t *hn;
-    int8_t x;
-    int8_t y;
-    int8_t speed;
-    int nTurn;
-    int8_t isPC;
-    int8_t isAlive;
-    int8_t sequenceNum;
-    union Entity {
-        pc player;
-        npc nonPlayer;
-    } entity;
-} character;
+class character {
+    public:
+        heap_node_t *hn;
+        int8_t x;
+        int8_t y;
+        int8_t speed;
+        int nTurn;
+        int8_t isPC;
+        int8_t isAlive;
+        int8_t sequenceNum;
+        union Entity {
+            pc player;
+            npc nonPlayer;
+        } entity;
+};
 
-typedef struct dungeon {
-    corPath path[floorMaxY][floorMaxX];
-    char floor[floorMaxY][floorMaxX];
-    uint8_t hardness[floorMaxY][floorMaxX];
-    uint8_t nonTunDist[floorMaxY][floorMaxX];
-    uint8_t tunDist[floorMaxY][floorMaxX];
-    character charMap[floorMaxY][floorMaxX];
-    room *roomList;
-    stair *stairListU;
-    stair *stairListD;
-    int16_t numRooms;
-    int16_t numUStairs;
-    int16_t numDStairs;
-    int numMon;
-} dungeon;
+class dungeon {
+    public:
+        corPath path[floorMaxY][floorMaxX];
+        char floor[floorMaxY][floorMaxX];
+        char fogMap[floorMaxY][floorMaxX];
+        uint8_t hardness[floorMaxY][floorMaxX];
+        uint8_t nonTunDist[floorMaxY][floorMaxX];
+        uint8_t tunDist[floorMaxY][floorMaxX];
+        character charMap[floorMaxY][floorMaxX];
+        room *roomList;
+        stair *stairListU;
+        stair *stairListD;
+        int16_t numRooms;
+        int16_t numUStairs;
+        int16_t numDStairs;
+        int numMon;
+};
 
 void corridorGen(dungeon *d);
 void borderGen(dungeon *d);

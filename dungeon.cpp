@@ -11,6 +11,7 @@
 #include "pc.h"
 #include "pathfinder.h"
 #include "printers.h"
+#include "move.h"
 
 /*****************************************
  *           Border Generator            *
@@ -20,14 +21,18 @@ void borderGen(dungeon *d)
     int i, j;
     for(i = 0; i < floorMaxY; i++){ // Sides
         d->floor[i][0] = edgeChar;
+        d->fogMap[i][0] = edgeChar;
         d->hardness[i][0] = 255;
         d->floor[i][floorMaxX - 1] = edgeChar;
+        d->fogMap[i][floorMaxX - 1] = edgeChar;
         d->hardness[i][floorMaxX - 1] = 255;
     }
     for(j = 0; j < floorMaxX; j++){ // Top/Bottom
         d->floor[0][j] = edgeChar;
+        d->fogMap[0][j] = edgeChar;
         d->hardness[0][j] = 255;
         d->floor[floorMaxY - 1][j] = edgeChar;
+        d->fogMap[floorMaxY - 1][j] = edgeChar;
         d->hardness[floorMaxY - 1][j] = 255;
     }
 }
@@ -161,6 +166,25 @@ void staircaseGen(dungeon *d)
     }
 }
 /*****************************************
+ *             Fog Machine               *
+ *****************************************/
+void fogGen(dungeon *d)
+{
+    int y, x;
+    
+    for (y = 0; y < floorMaxY; y++) {
+        for(x = 0; x < floorMaxX; x++){
+            if(d->fogMap[y][x] == edgeChar)
+                continue;
+            d->fogMap[y][x] = rockChar;
+        }
+    }
+
+    
+    updateFog(d);
+}
+
+/*****************************************
  *           Dungeon Deletor             *
  *****************************************/
 void dungeonDelete(dungeon *d)
@@ -194,6 +218,7 @@ void gameGen(dungeon *d)
     dijkstra(d, 0); // non tunneling
     dijkstra(d, 1); // tunneling
     monsterGen(d);
+    fogGen(d);
     terminalInit();
     printGame(d);
     //refresh();

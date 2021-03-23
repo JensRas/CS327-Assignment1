@@ -1,6 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <string>
 #include <ncurses.h>
 
 #include "printers.h"
@@ -16,27 +17,27 @@ void printGame(dungeon *d)
     int y, x;
     for(y = 0; y < floorMaxY; y++){ 
         for(x = 0; x < floorMaxX; x++){
-            if (d->charMap[y][x].isAlive && !d->charMap[y][x].isPC) {
-                //printf("%x", d->charMap[y][x].entity.nonPlayer.type);
+            // if fogOfWar
+            mvprintw(1 + y, x, "%c", d->fogMap[y][x]);
+            // else 
+            /* if (d->charMap[y][x].isAlive && !d->charMap[y][x].isPC) {
                 mvprintw(1 + y, x, "%x", d->charMap[y][x].entity.nonPlayer.type);
             } else if (d->charMap[y][x].isPC && d->charMap[y][x].isAlive) {
                 mvprintw(1 + y, x, "%c", playerChar);
-                //printf("%c", playerChar);
             } else {
-                //printf("%c", d->floor[y][x]);
                 mvprintw(1 + y, x, "%c", d->floor[y][x]);
-            }
+            } */
         }
-        //printf("\n");
     }
-    //printf("\n");
     refresh();
 }
+
 /*****************************************
  *             Map Printer               *
  *****************************************/
 void printMap(dungeon *d) 
 {
+    // Needs updating to ncurses
     int i, j;
     
     for(i = 0; i < floorMaxY; i++){
@@ -55,6 +56,7 @@ void printMap(dungeon *d)
     }
     printf("\n");
 }
+
 /*****************************************
  *          nCurses Generator            *
  *****************************************/

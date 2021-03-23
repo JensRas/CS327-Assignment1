@@ -304,6 +304,7 @@ void gameRunner(dungeon *d) // This is the problem!!!
                 if(c->isPC) {
                      c->nTurn = c->nTurn + (1000 / c->speed);
                     heap_insert(&h, c);
+                    updateFog(d);
                     return;
                 } else {
                     heap_insert(&h, c);
@@ -509,6 +510,7 @@ void runGame(dungeon *d)
                 refresh();
                 continue;
         }
+        
         gameRunner(d);
         //check for pc and monsters
         for(y = 0; y < floorMaxY; y++){
@@ -563,4 +565,30 @@ void winGame()
 void loseGame()
 {
     mvprintw(23, 35, "YOU LOSE");
+}
+
+/*****************************************
+ *             Update Fog                *
+ *****************************************/
+void updateFog(dungeon *d)
+{   
+    int y, x;
+    character *pc = findPC(d);
+
+    for(y = pc->y - fogVision / 2; y <= pc->y + fogVision / 2; y++){
+        for(x = pc->x - fogVision / 2; x <= pc->x + fogVision / 2; x++){
+            if(y < 0 || y > floorMaxY || x < 0 || x > floorMaxX)
+                continue;
+            if(d->charMap[y][x].isAlive && !d->charMap[y][x].isPC){
+                char *s = (char*) malloc(1 * sizeof(char*));
+                sprintf(s, "%x", d->charMap[y][x].entity.nonPlayer.type);
+                d->fogMap[y][x] = *s;
+            } else if(d->charMap[y][x].isPC) {
+                d->fogMap[y][x] = playerChar;
+            } else {
+                d->fogMap[y][x] = d->floor[y][x];
+            }
+        }
+    }
+
 }
