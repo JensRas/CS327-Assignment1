@@ -41,6 +41,7 @@ void playerGen(dungeon *d)
         }
     }
 }
+
 /*****************************************
  *             Player Mover              *
  *****************************************/
@@ -76,6 +77,40 @@ void movePC(dungeon *d, int yOff, int xOff)
 
     updateFog(d);
 }
+
+/*****************************************
+ *           Player Mover 2              *
+ *****************************************/
+void movePC(dungeon *d, int newY, int newX, bool override)
+{
+    int y, x, oldY, oldX;
+    character *pc; 
+
+    for(y = 0; y < floorMaxY; y++){
+        for(x = 0; x < floorMaxX; x++){
+            if(d->charMap[y][x].isPC)
+                pc = &d->charMap[y][x];
+        }
+    }
+    
+    if(d->floor[newY][newX] == rockChar && !override)
+        return;
+
+    oldY = pc->y;
+    oldX = pc->x;
+    pc->y = newY;
+    pc->x = newX;
+    d->charMap[newY][newX] = *pc;
+    d->charMap[oldY][oldX].y = oldY;
+    d->charMap[oldY][oldX].x = oldX;
+    d->charMap[oldY][oldX].speed = 0;
+    d->charMap[oldY][oldX].nTurn = 0;
+    d->charMap[oldY][oldX].isPC = 0;
+    d->charMap[oldY][oldX].isAlive = 0;
+    d->charMap[oldY][oldX].sequenceNum = 0;
+    d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
+}
+
 /*****************************************
  *            Find the Player            *
  *****************************************/

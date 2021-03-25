@@ -10,6 +10,7 @@ typedef struct pc {
 
 void playerGen(dungeon *d);
 void movePC(dungeon *d, int yOff, int xOff);
+void movePC(dungeon *d, int yOff, int xOff, bool override);
 character *findPC(dungeon *d);
 
 #endif

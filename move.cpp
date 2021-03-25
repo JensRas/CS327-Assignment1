@@ -323,11 +323,12 @@ void runGame(dungeon *d)
 {
     character *pc;
     int entityCount, y, x, key;
+    bool fog = true;
 
     while(1){
         key = getch();
         entityCount = 0;
-        printGame(d);
+        printGame(d, fog);
         switch (key) {
             case KEY_HOME:                  // Up Left
                 movePC(d, -1, -1);
@@ -424,13 +425,52 @@ void runGame(dungeon *d)
                 refresh();
                 continue;
             case 'f':                       // Toggle "Fog of War"
-                mvprintw(0, 0, "f");
-                refresh();
+                fog = fog ? false : true;
+                printGame(d, fog);
                 continue;
             case 'g':                       // Teleport
-                mvprintw(0, 0, "g");
-                refresh();
-                continue;
+                curs_set(1);
+                pc = findPC(d);
+                y = pc->y + 1, x = pc->x;
+                move(y, x);
+                while(1) {
+                    refresh();
+                    key = getch();
+                    if(key == 'g'){
+                        movePC(d, y - 1, x, true);
+                        curs_set(0);
+                        break;
+                    } else if (key == 'r'){
+                        curs_set(0);
+                        movePC(d, (rand() % (floorMaxY - 1)) + 1, (rand() % (floorMaxX - 1)) + 1, true);
+                        break;
+                    } else if (key == '1' || key == 'b' || key == KEY_END) { // Down Left
+                        move(++y, --x);
+                        continue;
+                    } else if (key == '4' || key == 'h' || key == KEY_LEFT) { // Left
+                        move(y, --x);
+                        continue;
+                    } else if (key == '7' || key == 'y' || key == KEY_HOME) { // Up Left
+                        move(--y, --x);
+                        continue;
+                    } else if (key == '8' || key == 'k' || key == KEY_UP) { // Up
+                        move(--y, x);
+                        continue;
+                    } else if (key == '9' || key == 'u' || key == KEY_PPAGE) { // Up Right
+                        move(--y, ++x);
+                        continue;
+                    } else if (key == '6' || key == 'l' || key == KEY_RIGHT) { // Right
+                        move(y, ++x);
+                        continue;
+                    } else if (key == '3' || key == 'n' || key == KEY_NPAGE) { // Down Right
+                        move(++y, ++x);
+                        continue;
+                    } else if (key == '2' || key == 'j' || key == KEY_DOWN) { // Down
+                        move(++y, x);
+                        continue;
+                    }
+                }
+                break;
             case 'h':                       // Left
                 movePC(d, 0, -1);
                 break;
@@ -450,7 +490,7 @@ void runGame(dungeon *d)
             case 'm':                       // Display Monster List
                 makeMonstList(d);
                 clear();
-                printGame(d);
+                printGame(d, fog);
                 continue;
             case 'n':                       // Down Right
                 movePC(d, 1, 1);
@@ -530,7 +570,9 @@ void runGame(dungeon *d)
             winGame();
             return;
         }
-        printGame(d);
+
+        printGame(d, fog);
+
         //usleep(10000 * 60);
         dijkstra(d, 0);
         dijkstra(d, 1);
@@ -573,7 +615,8 @@ void loseGame()
 void updateFog(dungeon *d)
 {   
     int y, x;
-    character *pc = findPC(d);
+    character *pc;
+    pc = findPC(d);
 
     for(y = pc->y - fogVision / 2; y <= pc->y + fogVision / 2; y++){
         for(x = pc->x - fogVision / 2; x <= pc->x + fogVision / 2; x++){

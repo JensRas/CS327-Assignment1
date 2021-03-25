@@ -220,6 +220,6 @@ void gameGen(dungeon *d)
     monsterGen(d);
     fogGen(d);
     terminalInit();
-    printGame(d);
+    printGame(d, true);
     //refresh();
 }

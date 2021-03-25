@@ -12,21 +12,22 @@
 /*****************************************
  *            Game Printer               *
  *****************************************/
-void printGame(dungeon *d)
+void printGame(dungeon *d, bool fog)
 {
     int y, x;
     for(y = 0; y < floorMaxY; y++){ 
         for(x = 0; x < floorMaxX; x++){
-            // if fogOfWar
-            mvprintw(1 + y, x, "%c", d->fogMap[y][x]);
-            // else 
-            /* if (d->charMap[y][x].isAlive && !d->charMap[y][x].isPC) {
-                mvprintw(1 + y, x, "%x", d->charMap[y][x].entity.nonPlayer.type);
-            } else if (d->charMap[y][x].isPC && d->charMap[y][x].isAlive) {
-                mvprintw(1 + y, x, "%c", playerChar);
+            if (fog) {
+                mvprintw(1 + y, x, "%c", d->fogMap[y][x]);
             } else {
-                mvprintw(1 + y, x, "%c", d->floor[y][x]);
-            } */
+                if (d->charMap[y][x].isAlive && !d->charMap[y][x].isPC) {
+                    mvprintw(1 + y, x, "%x", d->charMap[y][x].entity.nonPlayer.type);
+                } else if (d->charMap[y][x].isPC && d->charMap[y][x].isAlive) {
+                    mvprintw(1 + y, x, "%c", playerChar);
+                } else {
+                    mvprintw(1 + y, x, "%c", d->floor[y][x]);
+                }
+            }
         }
     }
     refresh();
