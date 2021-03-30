@@ -17,13 +17,13 @@ HEAP = heap.o
 
 all: $(BIN) etags
 
-$(BIN): $(OBJS)
-	@$(ECHO) Linking $@
-	@$(CXX) $^ -o $@ $(LDFLAGS)
-
 $(BIN): $(HEAP)
 	@$(ECHO) Linking $@
 	@$(CC) $^ -o $@ $(LDFLAGS)
+
+$(BIN): $(OBJS)
+	@$(ECHO) Linking $@
+	@$(CXX) $^ -o $@ $(LDFLAGS)
 
 -include $(OBJS:.o=.d)
 
@@ -39,7 +39,7 @@ $(BIN): $(HEAP)
 
 clean:
 	@$(ECHO) Removing all generated files
-	@$(RM) *.o $(BIN) *.d TAGS core vgcore.* gmon.out
+	@$(RM) *.o $(BIN) *.d TAGS core vgcore.* gmon.out *.stackdump
 
 clobber: clean
 	@$(ECHO) Removing backup files

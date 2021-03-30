@@ -1,7 +1,8 @@
 #include <cstdlib>
-#include <cstring>
 #include <ncurses.h>
 #include <string>
+#include <iostream>
+#include <fstream>
 
 #include "dungeon.h"
 #include "npc.h"
@@ -187,4 +188,95 @@ void makeMonstList(dungeon *d)
     }
     delwin(myWin);
     free(list);
+}
+
+/*****************************************
+ *            Monster Parser             *
+ *****************************************/
+int parseMonFile(std::fstream &f, dungeon *d)
+{   
+    std::string str;
+    std::string delimiter = " ";
+    std::string s;
+    int i = 0;
+    bool fail = false;
+    size_t pos;
+    std::getline(f, str); 
+    if(str != "RLG327 MONSTER DESCRIPTION 1")
+        return -1;
+    d->version = str;
+
+    while(!f.eof()) {
+        fail = false;
+        while(std::getline(f, str)){
+            if(str == "BEGIN MONSTER")
+                break;
+        }
+
+        while(std::getline(f, str)) {
+            if(str == "END") {
+                i++;
+                break;
+            }
+
+            // Implement check if it happens twice
+            if (str.find("NAME") != std::string::npos) {
+                d->monDesc[i].name = str.substr(5);
+            } else if (str.find("SYMB") != std::string::npos) {
+                d->monDesc[i].symbol = str.substr(5);
+            } else if (str.find("COLOR") != std::string::npos) {
+                d->monDesc[i].color = "COLOR_" + str.substr(6); // Word to ncurses color
+            } else if (str.find("SPEED") != std::string::npos) { // Dice
+                d->monDesc[i].speed = str.substr(6);
+            } else if (str.find("ABIL") != std::string::npos) {
+                str.erase(0, s.find(delimiter) + delimiter.length());
+                while ((pos = s.find(delimiter)) != std::string::npos) {
+                    s = str.substr(0, pos);
+                    str.erase(0, pos + delimiter.length());
+                    
+                    if (s == "SMART")
+                        d->monDesc[i].ability = BIT_SMART | 1;
+                    else if (s == "TELE") 
+                        d->monDesc[i].ability = BIT_TELE | 1;
+                    else if (s == "TUNNEL")
+                        d->monDesc[i].ability = BIT_TUN | 1;
+                    else if (s == "ERRATIC")
+                        d->monDesc[i].ability = BIT_ERAT | 1;
+                    else if (s == "PASS")
+                        d->monDesc[i].ability = BIT_PASS | 1;
+                    else if (s == "PICKUP")
+                        d->monDesc[i].ability = BIT_PICKUP | 1;
+                    else if (s == "DESTROY")
+                        d->monDesc[i].ability = BIT_DESTROY | 1;
+                    else if (s == "UNIQ")
+                        d->monDesc[i].ability = BIT_UNIQ | 1;
+                    else if (s == "BOSS")
+                        d->monDesc[i].ability = BIT_BOSS | 1;
+                    //else 
+                        
+                }
+            } else if (str.find("HP") != std::string::npos) { // Dice
+                d->monDesc[i].health = str.substr(3);
+            } else if (str.find("DAM") != std::string::npos) { // Dice
+                d->monDesc[i].damage = str.substr(4);
+            } else if (str.find("DESC") != std::string::npos) { // get new line until new line == '.' => lines also can't be longer than 77.
+                while(std::getline(f, str)) {
+                    if(str == ".")
+                        break;
+                    if(str.length() >= 78) {
+                        fail = true;
+                        break;
+                    }
+                    d->monDesc[i].desc += str;
+                }
+                if(fail)
+                    break;
+            } else if (str.find("RRTY") != std::string::npos) {
+                d->monDesc[i].rarity = stoi(str.substr(5));
+            } else {
+                break;
+            }
+        }
+    }
+    return 0;
 }

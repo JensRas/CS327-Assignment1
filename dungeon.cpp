@@ -41,7 +41,7 @@ void borderGen(dungeon *d)
  *****************************************/
 void roomGen(dungeon *d)
 {
-    int i, j, k, failCount = 0; // For testing
+    int i, j, k;
     bool placedAll = false;
 
     while(!placedAll){
@@ -77,9 +77,7 @@ void roomGen(dungeon *d)
                 }
             }
         }
-        failCount++;
     }
-    //printf("Failed: %d\n", failCount);
 }
 /*****************************************
  *         Corridor Generator            *
@@ -221,5 +219,4 @@ void gameGen(dungeon *d)
     fogGen(d);
     terminalInit();
     printGame(d, true);
-    //refresh();
 }

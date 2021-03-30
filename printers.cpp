@@ -1,6 +1,5 @@
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <string>
 #include <ncurses.h>
 
@@ -56,6 +55,40 @@ void printMap(dungeon *d)
         printf("\n");
     }
     printf("\n");
+}
+
+std::string findFilePath(int x, std::string s)
+{   
+    std::string home; 
+    std::string gameDir = ".rlg327";
+    std::string fileName = s; 
+    std::string path;
+    std::string jens;
+    std::string thomas;
+
+    if(x == 0) { // Final Game
+        home = getenv("HOME"); 
+        //path = (std::string)malloc(home.length() + gameDir.length() + fileName.length() + 2 + 1);
+        //sprintf(path, "%s/%s/%s", home, gameDir, fileName); 
+        path = home + "/" + gameDir + "/" + fileName;
+    } else if(x == 1) { // Thomas'
+        home = getenv("HOME");
+        thomas = "COM327-HW/CS327-Assignment1";
+        path = home + "/" + thomas + "/" + gameDir + "/" + fileName;
+        //path = (std::string)malloc((home.length() + thomas.length() + gameDir.length() + fileName.length() + 3 + 1) * sizeof(char));
+        //sprintf(path, "%s/%s/%s/%s", home, thomas, gameDir, fileName);
+    } else if(x == 2) { // Jens'
+        jens = "/cygdrive/u/spring2021/COMS 327/Homework 1.02/CS327-Assignment1";
+        //path = (std::string)malloc(jens.length() + gameDir.length() +fileName.length() + 2 + 1);
+        //sprintf(path, "%s/%s/%s", jens, gameDir, fileName); 
+        path = jens + "/" + gameDir + "/" + fileName;
+    } else {
+        //path = (std::string)malloc(10);
+        //sprintf(path, "Error");
+        path = "ERROR";
+    }
+    
+    return path;
 }
 
 /*****************************************

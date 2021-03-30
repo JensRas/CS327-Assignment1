@@ -1,6 +1,9 @@
 #ifndef DUNGEON_H
 #define DUNGEON_H
 
+#include <string>
+#include <cstring>
+
 #include "heap.h"
 #include "pc.h"
 #include "npc.h"
@@ -45,6 +48,19 @@ typedef struct corPath {
   int32_t cost;
 } corPath;
 
+class monDesc {
+    public:
+        std::string name;
+        std::string symbol;
+        std::string color;
+        std::string speed;
+        uint16_t ability;
+        std::string health;
+        std::string damage;
+        std::string desc;
+        uint8_t rarity;
+};
+
 class character {
     public:
         heap_node_t *hn;
@@ -70,6 +86,8 @@ class dungeon {
         uint8_t nonTunDist[floorMaxY][floorMaxX];
         uint8_t tunDist[floorMaxY][floorMaxX];
         character charMap[floorMaxY][floorMaxX];
+        monDesc monDesc[defaultMonNum]; // Need to find the correct size for this somehow
+        std::string version;
         room *roomList;
         stair *stairListU;
         stair *stairListD;
