@@ -102,11 +102,11 @@ void printMonDef(dungeon *d)
     std::string strColor;
     std::string strAbils;
 
-    for (i = 0; d->monDesc[i].valid; i++) {
+    for (i = 0; i < (int)d->monDesc.size(); i++) {
 
         strColor = "";
         strAbils = "";
-
+        // Construct color string from bitvector
         if (d->monDesc[i].color & BIT_BLACK)
             strColor += "BLACK ";
         if (d->monDesc[i].color & BIT_BLUE) 
@@ -123,7 +123,7 @@ void printMonDef(dungeon *d)
             strColor += "YELLOW ";
         if (d->monDesc[i].color & BIT_WHITE)
             strColor += "WHITE ";
-
+        // Construct ability string from bitvector
         if (d->monDesc[i].ability & BIT_SMART)
             strAbils += "SMART ";
         if (d->monDesc[i].ability & BIT_TELE) 
@@ -164,11 +164,11 @@ void printObjDef(dungeon *d)
     std::string strColor;
     std::string strType;
 
-    for (i = 0; d->objDesc[i].valid; i++) {
-
+    for (i = 0; i < (int)d->objDesc.size(); i++) {
+        // Empties strings
         strColor = "";
         strType = "";
-
+        // Construct color string from bitvector
         if (d->objDesc[i].color & BIT_BLACK)
             strColor += "BLACK ";
         if (d->objDesc[i].color & BIT_BLUE) 
@@ -185,7 +185,7 @@ void printObjDef(dungeon *d)
             strColor += "YELLOW ";
         if (d->objDesc[i].color & BIT_WHITE)
             strColor += "WHITE ";
-
+        // Construct type string from bitvector
         if (d->objDesc[i].type & BIT_WEAPON)
             strType += "WEAPON ";
         if (d->objDesc[i].type & BIT_OFFHAND) 

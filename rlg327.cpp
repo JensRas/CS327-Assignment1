@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
     // /*
 
-    std::fstream f (findFilePath(0, "monster_desc.txt"), f.in);
+    std::fstream f (findFilePath(1, "monster_desc.txt"), f.in);
     if(!f.is_open()){
         fprintf(stderr, "Failed to open monster file for reading");
         return -1;
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
         printMonDef(&d);
         f.close();
     }
-    f.open(findFilePath(0, "object_desc.txt"), f.in);
+    f.open(findFilePath(1, "object_desc.txt"), f.in);
     if(!f.is_open()){
         fprintf(stderr, "Failed to open object file for reading");
         return -1;

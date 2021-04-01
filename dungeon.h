@@ -3,6 +3,7 @@
 
 #include <string>
 #include <cstring>
+#include <vector>
 
 #include "heap.h"
 #include "pc.h"
@@ -50,7 +51,7 @@ typedef struct corPath {
 
 class dice {
     public:
-        uint32_t base;
+        uint32_t base = 0;
         uint32_t sides;
         uint32_t numDice;
 };
@@ -59,22 +60,21 @@ class monDesc {
     public:
         std::string name;
         std::string symbol;
-        uint8_t color;
+        uint8_t color = 0;
         dice speed;
-        uint16_t ability;
+        uint16_t ability = 0;
         dice health;
         dice damage;
         std::string desc;
-        uint8_t rarity;
-        bool valid = false;
+        uint8_t rarity = 0;
 };
 
 class objDesc {
     public:
         std::string name;
         std::string desc;
-        uint32_t type;
-        uint8_t color;
+        uint32_t type = 0;
+        uint8_t color = 0;
         dice hit;
         dice dam;
         dice dodge;
@@ -84,8 +84,7 @@ class objDesc {
         dice attr;
         dice val;
         std::string art;
-        uint8_t rarity;
-        bool valid = false;
+        uint8_t rarity = 0;
 };
 
 class character {
@@ -113,8 +112,8 @@ class dungeon {
         uint8_t nonTunDist[floorMaxY][floorMaxX];
         uint8_t tunDist[floorMaxY][floorMaxX];
         character charMap[floorMaxY][floorMaxX];
-        monDesc monDesc[30]; // Need to find the correct size for this somehow
-        objDesc objDesc[50]; // Need to find the correct size for this also
+        std::vector<monDesc> monDesc; 
+        std::vector<objDesc> objDesc;
         std::string monVersion;
         std::string objVersion;
         room *roomList;
