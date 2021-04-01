@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
         return -1;
     } else {
         parseMonFile(f, &d);
-        //printMonDesc(&d);
+        printMonDef(&d);
         f.close();
         return 0;
     }

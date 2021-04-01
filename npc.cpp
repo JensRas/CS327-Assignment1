@@ -225,35 +225,39 @@ int parseMonFile(std::fstream &f, dungeon *d)
             } else if (str.find("SYMB") != std::string::npos) {
                 d->monDesc[i].symbol = str.substr(5);
             } else if (str.find("COLOR") != std::string::npos) {
-                d->monDesc[i].color = "COLOR_" + str.substr(6); // Word to ncurses color
+                d->monDesc[i].color = "COLOR_" + str.substr(6); // Word to ncurses color Need to store as bitwise vector.
             } else if (str.find("SPEED") != std::string::npos) { // Dice
                 d->monDesc[i].speed = str.substr(6);
             } else if (str.find("ABIL") != std::string::npos) {
-                str.erase(0, s.find(delimiter) + delimiter.length());
-                while ((pos = s.find(delimiter)) != std::string::npos) {
+                str.erase(0, str.find(delimiter) + delimiter.length());
+                s = str;
+                d->monDesc[i].ability = 0;
+                while (true) {
+                    pos = str.find(delimiter);
                     s = str.substr(0, pos);
                     str.erase(0, pos + delimiter.length());
-                    
+
                     if (s == "SMART")
-                        d->monDesc[i].ability = BIT_SMART | 1;
+                        d->monDesc[i].ability |= BIT_SMART;
                     else if (s == "TELE") 
-                        d->monDesc[i].ability = BIT_TELE | 1;
+                        d->monDesc[i].ability |= BIT_TELE;
                     else if (s == "TUNNEL")
-                        d->monDesc[i].ability = BIT_TUN | 1;
+                        d->monDesc[i].ability |= BIT_TUN;
                     else if (s == "ERRATIC")
-                        d->monDesc[i].ability = BIT_ERAT | 1;
+                        d->monDesc[i].ability |= BIT_ERAT;
                     else if (s == "PASS")
-                        d->monDesc[i].ability = BIT_PASS | 1;
+                        d->monDesc[i].ability |= BIT_PASS;
                     else if (s == "PICKUP")
-                        d->monDesc[i].ability = BIT_PICKUP | 1;
+                        d->monDesc[i].ability |= BIT_PICKUP;
                     else if (s == "DESTROY")
-                        d->monDesc[i].ability = BIT_DESTROY | 1;
+                        d->monDesc[i].ability |= BIT_DESTROY;
                     else if (s == "UNIQ")
-                        d->monDesc[i].ability = BIT_UNIQ | 1;
+                        d->monDesc[i].ability |= BIT_UNIQ;
                     else if (s == "BOSS")
-                        d->monDesc[i].ability = BIT_BOSS | 1;
-                    //else 
-                        
+                        d->monDesc[i].ability |= BIT_BOSS;
+
+                    if (pos == std::string::npos)
+                        break;                  
                 }
             } else if (str.find("HP") != std::string::npos) { // Dice
                 d->monDesc[i].health = str.substr(3);
@@ -267,7 +271,7 @@ int parseMonFile(std::fstream &f, dungeon *d)
                         fail = true;
                         break;
                     }
-                    d->monDesc[i].desc += str;
+                    d->monDesc[i].desc += str + "\n";
                 }
                 if(fail)
                     break;

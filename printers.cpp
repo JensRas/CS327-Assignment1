@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <string>
 #include <ncurses.h>
+#include <iostream>
 
 #include "printers.h"
 #include "dungeon.h"
@@ -73,7 +74,7 @@ std::string findFilePath(int x, std::string s)
         path = home + "/" + gameDir + "/" + fileName;
     } else if(x == 1) { // Thomas'
         home = getenv("HOME");
-        thomas = "COM327-HW/CS327-Assignment1";
+        thomas = "com327";
         path = home + "/" + thomas + "/" + gameDir + "/" + fileName;
         //path = (std::string)malloc((home.length() + thomas.length() + gameDir.length() + fileName.length() + 3 + 1) * sizeof(char));
         //sprintf(path, "%s/%s/%s/%s", home, thomas, gameDir, fileName);
@@ -89,6 +90,50 @@ std::string findFilePath(int x, std::string s)
     }
     
     return path;
+}
+
+/*****************************************
+ *       Monster Definition Printer      *
+ *****************************************/
+void printMonDef(dungeon *d)
+{
+    int i;
+
+    std::string strColor;
+    std::string strAbils;
+
+    
+
+    for (i = 0; i < (int)sizeof(d->monDesc) / (int)sizeof (d->monDesc[0]); i++) {
+        strColor = d->monDesc[i].color.substr(6, d->monDesc[i].color.length());
+
+        strAbils = "";
+
+        if (d->monDesc[i].ability & BIT_SMART)
+            strAbils += "SMART ";
+        if (d->monDesc[i].ability & BIT_TELE) 
+            strAbils += "TELE ";
+        if (d->monDesc[i].ability & BIT_TUN)
+            strAbils += "TUNNEL ";
+        if (d->monDesc[i].ability & BIT_ERAT)
+            strAbils += "ERRATIC ";
+        if (d->monDesc[i].ability & BIT_PASS)
+            strAbils += "PASS ";
+        if (d->monDesc[i].ability & BIT_PICKUP)
+            strAbils += "PICKUP ";
+        if (d->monDesc[i].ability & BIT_DESTROY)
+            strAbils += "DESTROY ";
+        if (d->monDesc[i].ability & BIT_UNIQ)
+            strAbils += "UNIQ ";
+        if (d->monDesc[i].ability & BIT_BOSS)
+            strAbils += "BOSS ";
+
+        std::cout << d->monDesc[i].name << std::endl << d->monDesc[i].desc 
+                  << d->monDesc[i].symbol << std::endl << strColor
+                  << std::endl << d->monDesc[i].speed << std::endl << strAbils
+                  << std::endl << d->monDesc[i].health << std::endl << d->monDesc[i].damage
+                  << std::endl << (int)d->monDesc[i].rarity << std::endl << std::endl;
+    }
 }
 
 /*****************************************

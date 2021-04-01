@@ -10,11 +10,11 @@
 #define BIT_TELE      0x2
 #define BIT_TUN       0x4
 #define BIT_ERAT      0x8
-#define BIT_PASS      0x16
-#define BIT_PICKUP    0x32
-#define BIT_DESTROY   0x64
-#define BIT_UNIQ      0x128
-#define BIT_BOSS      0x256
+#define BIT_PASS      0x10
+#define BIT_PICKUP    0x20
+#define BIT_DESTROY   0x40
+#define BIT_UNIQ      0x80
+#define BIT_BOSS      0x100
 
 typedef struct dungeon dungeon;
 typedef struct character character;
