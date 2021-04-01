@@ -98,15 +98,12 @@ std::string findFilePath(int x, std::string s)
 void printMonDef(dungeon *d)
 {
     int i;
-
     std::string strColor;
     std::string strAbils;
 
-    
-
     for (i = 0; i < (int)sizeof(d->monDesc) / (int)sizeof (d->monDesc[0]); i++) {
+        
         strColor = d->monDesc[i].color.substr(6, d->monDesc[i].color.length());
-
         strAbils = "";
 
         if (d->monDesc[i].ability & BIT_SMART)
