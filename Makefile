@@ -11,7 +11,7 @@ CXXFLAGS = -Wall -Werror -ggdb -funroll-loops -DTERM=$(TERM)
 LDFLAGS = -lncurses
 
 BIN = rlg327
-OBJS = rlg327.o dungeon.o npc.o pc.o \
+OBJS = rlg327.o dungeon.o npc.o parsers.o pc.o \
 	   printers.o move.o pathfinder.o
 HEAP = heap.o
 

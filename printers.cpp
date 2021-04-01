@@ -8,6 +8,7 @@
 #include "dungeon.h"
 #include "pc.h"
 #include "npc.h"
+#include "parsers.h"
 
 /*****************************************
  *            Game Printer               *
@@ -101,10 +102,27 @@ void printMonDef(dungeon *d)
     std::string strColor;
     std::string strAbils;
 
-    for (i = 0; i < (int)sizeof(d->monDesc) / (int)sizeof (d->monDesc[0]); i++) {
-        
-        strColor = d->monDesc[i].color.substr(6, d->monDesc[i].color.length());
+    for (i = 0; d->monDesc[i].valid; i++) {
+
+        strColor = "";
         strAbils = "";
+
+        if (d->monDesc[i].color & BIT_BLACK)
+            strColor += "BLACK ";
+        if (d->monDesc[i].color & BIT_BLUE) 
+            strColor += "BLUE ";
+        if (d->monDesc[i].color & BIT_GREEN)
+            strColor += "GREEN ";
+        if (d->monDesc[i].color & BIT_CYAN)
+            strColor += "CYAN ";
+        if (d->monDesc[i].color & BIT_RED)
+            strColor += "RED ";
+        if (d->monDesc[i].color & BIT_MAGENTA)
+            strColor += "MAGENTA ";
+        if (d->monDesc[i].color & BIT_YELLOW)
+            strColor += "YELLOW ";
+        if (d->monDesc[i].color & BIT_WHITE)
+            strColor += "WHITE ";
 
         if (d->monDesc[i].ability & BIT_SMART)
             strAbils += "SMART ";
@@ -125,11 +143,99 @@ void printMonDef(dungeon *d)
         if (d->monDesc[i].ability & BIT_BOSS)
             strAbils += "BOSS ";
 
+        // Very long print statement that could probably be written easier. 
         std::cout << d->monDesc[i].name << std::endl << d->monDesc[i].desc 
-                  << d->monDesc[i].symbol << std::endl << strColor
-                  << std::endl << d->monDesc[i].speed << std::endl << strAbils
-                  << std::endl << d->monDesc[i].health << std::endl << d->monDesc[i].damage
+                  << d->monDesc[i].symbol << std::endl << strColor << std::endl 
+                  << d->monDesc[i].speed.base << "+" << d->monDesc[i].speed.numDice 
+                  << "d" << d->monDesc[i].speed.sides << std::endl << strAbils
+                  << std::endl << d->monDesc[i].health.base << "+" << d->monDesc[i].health.numDice
+                  << "d" << d->monDesc[i].health.sides << std::endl << d->monDesc[i].damage.base 
+                  << "+" << d->monDesc[i].damage.numDice << "d" << d->monDesc[i].damage.sides
                   << std::endl << (int)d->monDesc[i].rarity << std::endl << std::endl;
+    }
+}
+
+/*****************************************
+ *       Object Definition Printer      *
+ *****************************************/
+void printObjDef(dungeon *d)
+{
+    int i;
+    std::string strColor;
+    std::string strType;
+
+    for (i = 0; d->objDesc[i].valid; i++) {
+
+        strColor = "";
+        strType = "";
+
+        if (d->objDesc[i].color & BIT_BLACK)
+            strColor += "BLACK ";
+        if (d->objDesc[i].color & BIT_BLUE) 
+            strColor += "BLUE ";
+        if (d->objDesc[i].color & BIT_GREEN)
+            strColor += "GREEN ";
+        if (d->objDesc[i].color & BIT_CYAN)
+            strColor += "CYAN ";
+        if (d->objDesc[i].color & BIT_RED)
+            strColor += "RED ";
+        if (d->objDesc[i].color & BIT_MAGENTA)
+            strColor += "MAGENTA ";
+        if (d->objDesc[i].color & BIT_YELLOW)
+            strColor += "YELLOW ";
+        if (d->objDesc[i].color & BIT_WHITE)
+            strColor += "WHITE ";
+
+        if (d->objDesc[i].type & BIT_WEAPON)
+            strType += "WEAPON ";
+        if (d->objDesc[i].type & BIT_OFFHAND) 
+            strType += "OFFHAND ";
+        if (d->objDesc[i].type & BIT_RANGED)
+            strType += "RANGED ";
+        if (d->objDesc[i].type & BIT_ARMOR)
+            strType += "ARMOR ";
+        if (d->objDesc[i].type & BIT_HELMET)
+            strType += "HELMET ";
+        if (d->objDesc[i].type & BIT_CLOAK)
+            strType += "CLOAK ";
+        if (d->objDesc[i].type & BIT_GLOVES)
+            strType += "GLOVES ";
+        if (d->objDesc[i].type & BIT_BOOTS)
+            strType += "BOOTS ";
+        if (d->objDesc[i].type & BIT_RING)
+            strType += "RING ";
+        if (d->objDesc[i].type & BIT_AMULET) 
+            strType += "AMULET ";
+        if (d->objDesc[i].type & BIT_LIGHT)
+            strType += "LIGHT ";
+        if (d->objDesc[i].type & BIT_SCROLL)
+            strType += "SCROLL ";
+        if (d->objDesc[i].type & BIT_BOOK)
+            strType += "BOOK ";
+        if (d->objDesc[i].type & BIT_FLASK)
+            strType += "FLASK ";
+        if (d->objDesc[i].type & BIT_GOLD)
+            strType += "GOLD ";
+        if (d->objDesc[i].type & BIT_AMMUNITION)
+            strType += "AMMUNITION ";
+        if (d->objDesc[i].type & BIT_FOOD)
+            strType += "FOOD ";
+        if (d->objDesc[i].type & BIT_WAND)
+            strType += "WAND ";
+        if (d->objDesc[i].type & BIT_CONTAINER)
+            strType += "CONTAINER ";
+
+        // Very long print statement that could probably be written easier. 
+        std::cout << d->objDesc[i].name << std::endl << d->objDesc[i].desc << strType << std::endl << strColor << std::endl 
+                  << d->objDesc[i].hit.base << "+" << d->objDesc[i].hit.numDice << "d" << d->objDesc[i].hit.sides << std::endl
+                  << d->objDesc[i].dam.base << "+" << d->objDesc[i].dam.numDice << "d" << d->objDesc[i].dam.sides << std::endl
+                  << d->objDesc[i].dodge.base << "+" << d->objDesc[i].dodge.numDice << "d" << d->objDesc[i].dodge.sides << std::endl
+                  << d->objDesc[i].def.base << "+" << d->objDesc[i].def.numDice << "d" << d->objDesc[i].def.sides << std::endl
+                  << d->objDesc[i].weight.base << "+" << d->objDesc[i].weight.numDice << "d" << d->objDesc[i].weight.sides << std::endl
+                  << d->objDesc[i].speed.base << "+" << d->objDesc[i].speed.numDice << "d" << d->objDesc[i].speed.sides << std::endl
+                  << d->objDesc[i].attr.base << "+" << d->objDesc[i].attr.numDice << "d" << d->objDesc[i].attr.sides << std::endl
+                  << d->objDesc[i].val.base << "+" << d->objDesc[i].val.numDice << "d" << d->objDesc[i].val.sides << std::endl
+                  << d->objDesc[i].art << std::endl << (int)d->objDesc[i].rarity << std::endl << std::endl;
     }
 }
 

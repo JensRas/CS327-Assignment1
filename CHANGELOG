@@ -32,3 +32,5 @@ Assignment 1.06
 Assignment 1.07
 3/30/21 2:30 PM JCR TOM: Started implementing the parser for the monster descriptions.
 3/31/21 10:00 PM TOM: Added the printing for the newly store information. Pushed fixes for ability bitwise vectors. 
+4/1/21 1:00 AM TOM: Added dice class, changed speed - dmg - health to dice. Updated printing. 
+4/1/21 2:00 AM TOM: Added object file reading and printing. 

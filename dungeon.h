@@ -48,17 +48,44 @@ typedef struct corPath {
   int32_t cost;
 } corPath;
 
+class dice {
+    public:
+        uint32_t base;
+        uint32_t sides;
+        uint32_t numDice;
+};
+
 class monDesc {
     public:
         std::string name;
         std::string symbol;
-        std::string color;
-        std::string speed;
+        uint8_t color;
+        dice speed;
         uint16_t ability;
-        std::string health;
-        std::string damage;
+        dice health;
+        dice damage;
         std::string desc;
         uint8_t rarity;
+        bool valid = false;
+};
+
+class objDesc {
+    public:
+        std::string name;
+        std::string desc;
+        uint32_t type;
+        uint8_t color;
+        dice hit;
+        dice dam;
+        dice dodge;
+        dice def;
+        dice weight;
+        dice speed;
+        dice attr;
+        dice val;
+        std::string art;
+        uint8_t rarity;
+        bool valid = false;
 };
 
 class character {
@@ -86,8 +113,10 @@ class dungeon {
         uint8_t nonTunDist[floorMaxY][floorMaxX];
         uint8_t tunDist[floorMaxY][floorMaxX];
         character charMap[floorMaxY][floorMaxX];
-        monDesc monDesc[defaultMonNum]; // Need to find the correct size for this somehow
-        std::string version;
+        monDesc monDesc[30]; // Need to find the correct size for this somehow
+        objDesc objDesc[50]; // Need to find the correct size for this also
+        std::string monVersion;
+        std::string objVersion;
         room *roomList;
         stair *stairListU;
         stair *stairListD;

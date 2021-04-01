@@ -9,6 +9,7 @@
 #include "npc.h"
 #include "pathfinder.h"
 #include "printers.h"
+#include "parsers.h"
 
 static int32_t monster_cmp(const void *first, const void *second);
 
@@ -21,7 +22,6 @@ void gameRunner(dungeon *d) // This is the problem!!!
     heap_t h; 
     int y, x, i;
     int ran, ran2;
-    int oldY, oldX;
 
     heap_init(&h, monster_cmp, NULL); 
    
@@ -135,20 +135,7 @@ void gameRunner(dungeon *d) // This is the problem!!!
                 //update hardness
                 if(d->hardness[tempY][tempX] == 0){
                     if(c->y != tempY && c->x != tempX){
-                        oldY = c->y;
-                        oldX = c->x;
-                        c->y = tempY;
-                        c->x = tempX;
-                        d->charMap[tempY][tempX] = *c;
-                        d->charMap[oldY][oldX].y = oldY;
-                        d->charMap[oldY][oldX].x = oldX;
-                        d->charMap[oldY][oldX].speed = 0;
-                        d->charMap[oldY][oldX].nTurn = 0;
-                        d->charMap[oldY][oldX].isPC = 0;
-                        d->charMap[oldY][oldX].isAlive = 0;
-                        d->charMap[oldY][oldX].sequenceNum = 0;
-                        d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
-                        c = &d->charMap[tempY][tempX];
+                        c  = moveMonst(d, tempY, tempX, c);
                     }
                 }
                 else if (d->hardness[tempY][tempX] > 85) {
@@ -181,20 +168,7 @@ void gameRunner(dungeon *d) // This is the problem!!!
                         tempX = c->x - 1 + ran2;
                     }
                     if(c->y != tempY && c->x != tempX){
-                        oldY = c->y;
-                        oldX = c->x;
-                        c->y = tempY;
-                        c->x = tempX;
-                        d->charMap[tempY][tempX] = *c;
-                        d->charMap[oldY][oldX].y = oldY;
-                        d->charMap[oldY][oldX].x = oldX;
-                        d->charMap[oldY][oldX].speed = 0;
-                        d->charMap[oldY][oldX].nTurn = 0;
-                        d->charMap[oldY][oldX].isPC = 0;
-                        d->charMap[oldY][oldX].isAlive = 0;
-                        d->charMap[oldY][oldX].sequenceNum = 0;
-                        d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
-                        c = &d->charMap[tempY][tempX];
+                        c  = moveMonst(d, tempY, tempX, c);
                     }
                 }
 
@@ -229,20 +203,7 @@ void gameRunner(dungeon *d) // This is the problem!!!
                 //update hardness
                 if(d->hardness[tempY][tempX] == 0){
                     if(c->y != tempY && c->x != tempX){
-                        oldY = c->y;
-                        oldX = c->x;
-                        c->y = tempY;
-                        c->x = tempX;
-                        d->charMap[tempY][tempX] = *c;
-                        d->charMap[oldY][oldX].y = oldY;
-                        d->charMap[oldY][oldX].x = oldX;
-                        d->charMap[oldY][oldX].speed = 0;
-                        d->charMap[oldY][oldX].nTurn = 0;
-                        d->charMap[oldY][oldX].isPC = 0;
-                        d->charMap[oldY][oldX].isAlive = 0;
-                        d->charMap[oldY][oldX].sequenceNum = 0;
-                        d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
-                        c = &d->charMap[tempY][tempX];
+                        c  = moveMonst(d, tempY, tempX, c);
                     }
                 }
                 else if (d->hardness[tempY][tempX] > 85 && d->hardness[tempY][tempX] != 255) {
@@ -282,20 +243,7 @@ void gameRunner(dungeon *d) // This is the problem!!!
                     }
                 }
                 if(c->y != tempY && c->x != tempX){
-                    oldY = c->y;
-                    oldX = c->x;
-                    c->y = tempY;
-                    c->x = tempX;
-                    d->charMap[tempY][tempX] = *c;
-                    d->charMap[oldY][oldX].y = oldY;
-                    d->charMap[oldY][oldX].x = oldX;
-                    d->charMap[oldY][oldX].speed = 0;
-                    d->charMap[oldY][oldX].nTurn = 0;
-                    d->charMap[oldY][oldX].isPC = 0;
-                    d->charMap[oldY][oldX].isAlive = 0;
-                    d->charMap[oldY][oldX].sequenceNum = 0;
-                    d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
-                    c = &d->charMap[tempY][tempX];
+                    c  = moveMonst(d, tempY, tempX, c);
                 }
             }
  

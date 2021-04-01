@@ -10,10 +10,9 @@
 #include <fstream>
 
 #include "dungeon.h"
-#include "pc.h"
-#include "npc.h"
 #include "move.h"
 #include "printers.h"
+#include "parsers.h"
 
 /*****************************************
  *                Main                   *
@@ -31,16 +30,28 @@ int main(int argc, char *argv[])
 
     // /*
 
-    std::fstream f (findFilePath(1, "monster_desc.txt"), f.in);
+    std::fstream f (findFilePath(0, "monster_desc.txt"), f.in);
     if(!f.is_open()){
-        fprintf(stderr, "Failed to open file for reading");
+        fprintf(stderr, "Failed to open monster file for reading");
         return -1;
     } else {
         parseMonFile(f, &d);
+        printf("\n******************************MONSTERS******************************\n\n");
         printMonDef(&d);
+        f.close();
+    }
+    f.open(findFilePath(0, "object_desc.txt"), f.in);
+    if(!f.is_open()){
+        fprintf(stderr, "Failed to open object file for reading");
+        return -1;
+    } else {
+        parseObjFile(f, &d);
+        printf("\n******************************OBJECTS******************************\n\n");
+        printObjDef(&d);
         f.close();
         return 0;
     }
+
     // */
 
     if(argc >= 2){
