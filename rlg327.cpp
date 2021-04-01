@@ -24,13 +24,23 @@ int main(int argc, char *argv[])
     d.roomList = NULL;
     d.stairListU = NULL;
     d.stairListD = NULL;
-    int i;
+    int i, pathCheck = 0;
     bool monSet = false;
     //memset(&d, 0, sizeof(d));
 
+    if(argc >= 2){
+        for(i = 1; i < argc; i++){
+            if(!strcmp(argv[i], "--thomas")){
+                pathCheck = 1;
+                break;
+            } else if(!strcmp(argv[i], "--jens")){
+                pathCheck = 2;
+                break;
+            }
+        }
+    }
     // /*
-
-    std::fstream f (findFilePath(1, "monster_desc.txt"), f.in);
+    std::fstream f (findFilePath(pathCheck, "monster_desc.txt"), f.in);
     if(!f.is_open()){
         fprintf(stderr, "Failed to open monster file for reading");
         return -1;
@@ -40,7 +50,7 @@ int main(int argc, char *argv[])
         printMonDef(&d);
         f.close();
     }
-    f.open(findFilePath(1, "object_desc.txt"), f.in);
+    f.open(findFilePath(pathCheck, "object_desc.txt"), f.in);
     if(!f.is_open()){
         fprintf(stderr, "Failed to open object file for reading");
         return -1;
@@ -51,9 +61,7 @@ int main(int argc, char *argv[])
         f.close();
         return 0;
     }
-
     // */
-
     if(argc >= 2){
         for(i = 1; i < argc; i++){
             if(!strcmp(argv[i], "--nummon")){

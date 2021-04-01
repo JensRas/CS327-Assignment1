@@ -95,6 +95,14 @@ char *nameMonst()
     }
 }
 /*****************************************
+ *           Monster Attacker            *
+ *****************************************/
+void monsAttk(dungeon *d)
+{
+
+}
+
+/*****************************************
  *            Monster Mover              *
  *****************************************/
 character *moveMonst(dungeon *d, int newY, int newX, character *npc)

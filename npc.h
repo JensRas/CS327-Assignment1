@@ -19,6 +19,7 @@ typedef struct npc {
 
 void monsterGen(dungeon *d);
 char *nameMonst();
+void monsAttk(dungeon *d);
 character *moveMonst(dungeon *d, int newY, int newX, character *npc);
 void makeMonstList(dungeon *d);
 

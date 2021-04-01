@@ -76,7 +76,6 @@ void gameRunner(dungeon *d) // This is the problem!!!
             c->entity.nonPlayer.knownPCY = 0;
         }
         
-        // If PC is in a corridor this breaks
         pcRoom = -1;
         for(i = 0; i < d->numRooms; i++){
             for(y = d->roomList[i].cornerY; y < d->roomList[i].sizeY; y++){
