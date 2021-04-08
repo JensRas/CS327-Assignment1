@@ -44,5 +44,6 @@
 
 int parseMonFile(std::fstream &f, dungeon *d);
 int parseObjFile(std::fstream & f, dungeon *d);
+int rollDice(dice die);
 
 #endif

@@ -35,3 +35,4 @@ Assignment 1.07
 4/1/21 1:00 AM TOM: Added dice class, changed speed - dmg - health to dice. Updated printing. 
 4/1/21 2:00 AM TOM: Added object file reading and printing. 
 4/1/21 11:20 AM TOM: Changed arrays of objects to vectors to account for dynamic size. Added some comments
+4/7/21 10:30 PM TOM: Added rollDice function and added framwork for assingment - Updated README to no longer include --save and --load switches. 

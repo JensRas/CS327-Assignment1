@@ -39,15 +39,15 @@ int main(int argc, char *argv[])
             }
         }
     }
-    // /*
+
     std::fstream f (findFilePath(pathCheck, "monster_desc.txt"), f.in);
     if(!f.is_open()){
         fprintf(stderr, "Failed to open monster file for reading");
         return -1;
     } else {
         parseMonFile(f, &d);
-        printf("\n******************************MONSTERS******************************\n\n");
-        printMonDef(&d);
+        //printf("\n******************************MONSTERS******************************\n\n");
+        //printMonDef(&d);
         f.close();
     }
     f.open(findFilePath(pathCheck, "object_desc.txt"), f.in);
@@ -56,12 +56,11 @@ int main(int argc, char *argv[])
         return -1;
     } else {
         parseObjFile(f, &d);
-        printf("\n******************************OBJECTS******************************\n\n");
-        printObjDef(&d);
+        //printf("\n******************************OBJECTS******************************\n\n");
+        //printObjDef(&d);
         f.close();
         return 0;
     }
-    // */
     if(argc >= 2){
         for(i = 1; i < argc; i++){
             if(!strcmp(argv[i], "--nummon")){

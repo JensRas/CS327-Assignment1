@@ -9,24 +9,50 @@
 #include "pc.h"
 #include "npc.h"
 
-#define minRoomNumber  6
-#define maxRoomNumber 10
-#define maxStairNum    3        // Arbitrary value that can be changed
-#define maxRoomSize   10        // Arbitrary value that can be changed
-#define minRoomX       4
-#define minRoomY       3
-#define floorMaxX     80
-#define floorMaxY     21
-#define edgeChar     '#'        //Hardness = 255
-#define roomChar     ' '        //Hardness = 0
-#define corridorChar 'o'        //Hardness = 0
-#define rockChar     '.'        //Hardness = 100 (Non-zero, non-255)
-#define upChar       '<'        //Hardness = 0
-#define downChar     '>'        //Hardness = 0
-#define playerChar   '@'
-#define dimY          0
-#define dimX          1
-#define fogVision     5
+#define minRoomNumber       6
+#define maxRoomNumber      10
+#define maxStairNum         3        // Arbitrary value that can be changed
+#define maxRoomSize        10        // Arbitrary value that can be changed
+#define minRoomX            4
+#define minRoomY            3
+#define floorMaxX          80
+#define floorMaxY          21
+#define fogVision           5
+#define maxItems           10
+
+#define dimY                0
+#define dimX                1
+
+#define edgeChar           '#'        //Hardness = 255
+#define roomChar           ' '        //Hardness = 0
+#define corridorChar       'o'        //Hardness = 0
+#define rockChar           '.'        //Hardness = 100 (Non-zero, non-255)
+#define upChar             '<'        //Hardness = 0
+#define downChar           '>'        //Hardness = 0
+#define playerChar         '@'
+
+#define invalidChar        '*'
+#define weaponChar         '|'
+#define offhandChar        ')'
+#define rangedChar         '}'
+#define armorChar          '['
+#define helmetChar         ']'
+#define cloakChar          '('
+#define glovesChar         '{'
+#define bootsChar          '\\'
+#define ringChar           '='
+#define amuletChar         '"'
+#define lightChar          '_'
+#define scrollChar         '~'
+#define bookChar           '?'
+#define flaskChar          '!'
+#define goldChar           '$'
+#define ammunitionChar     '/'
+#define foodChar           ','
+#define wandChar           '-'
+#define containerChar      '%'
+#define stackChar          '&'
+
 
 //typedef struct pc pc;
 //typedef struct npc npc;
@@ -67,6 +93,7 @@ class monDesc {
         dice damage;
         std::string desc;
         uint8_t rarity = 0;
+        npc *generateNpc();
 };
 
 class objDesc {
@@ -103,6 +130,24 @@ class character {
         } entity;
 };
 
+class item {
+    public: 
+        std::string name;
+        std::string desc;
+        uint32_t type = 0;
+        uint8_t color = 0;
+        int hit;
+        dice dam;
+        int dodge;
+        int def;
+        int weight;
+        int speed;
+        int attr;
+        int val;
+        std::string art;
+        uint8_t rarity = 0;
+}
+
 class dungeon {
     public:
         corPath path[floorMaxY][floorMaxX];
@@ -112,6 +157,7 @@ class dungeon {
         uint8_t nonTunDist[floorMaxY][floorMaxX];
         uint8_t tunDist[floorMaxY][floorMaxX];
         character charMap[floorMaxY][floorMaxX];
+        item itemMap[floorMaxY][floorMaxX];
         std::vector<monDesc> monDesc; 
         std::vector<objDesc> objDesc;
         std::string monVersion;
