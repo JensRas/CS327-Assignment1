@@ -1,16 +1,30 @@
-#include "dice.h"
 #include <cstdlib>
 
-/*****************************************
- *              Dice Roller              *
- *****************************************/
-int32_t dice::rollDice(void) const
-{
-    int i, roll = 0;
+#include "dice.h"
+#include "utils.h"
 
-    for (i = 0; i < (int)numDice; i++) {
-        roll += (rand() % sides) + 1;
+int32_t dice::roll(void) const
+{
+  int32_t total;
+  uint32_t i;
+
+  total = base;
+
+  if (sides) {
+    for (i = 0; i < number; i++) {
+      total += rand_range(1, sides);
     }
-    roll += base;
-    return roll; 
+  }
+
+  return total;
+}
+
+std::ostream &dice::print(std::ostream &o)
+{
+  return o << base << '+' << number << 'd' << sides;
+}
+
+std::ostream &operator<<(std::ostream &o, dice &d)
+{
+  return d.print(o);
 }

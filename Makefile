@@ -5,21 +5,16 @@ RM = rm -f
 
 TERM = "\"S2021\""
 
-CFLAGS = -Wall -Werror -ggdb -funroll-loops -DTERM=$(TERM)
-CXXFLAGS = -Wall -Werror -ggdb -funroll-loops -DTERM=$(TERM)
+CFLAGS = -Wall -Werror -ggdb3 -funroll-loops -DTERM=$(TERM)
+CXXFLAGS = -Wall -Werror -ggdb3 -funroll-loops -DTERM=$(TERM)
 
 LDFLAGS = -lncurses
 
 BIN = rlg327
-OBJS = rlg327.o dungeon.o npc.o parsers.o pc.o \
-	   printers.o move.o pathfinder.o item.o dice.o
-HEAP = heap.o
+OBJS = rlg327.o heap.o dungeon.o path.o utils.o character.o object.o \
+       event.o move.o npc.o pc.o io.o descriptions.o dice.o
 
 all: $(BIN) etags
-
-$(BIN): $(HEAP)
-	@$(ECHO) Linking $@
-	@$(CC) $^ -o $@ $(LDFLAGS)
 
 $(BIN): $(OBJS)
 	@$(ECHO) Linking $@
@@ -39,7 +34,7 @@ $(BIN): $(OBJS)
 
 clean:
 	@$(ECHO) Removing all generated files
-	@$(RM) *.o $(BIN) *.d TAGS core vgcore.* gmon.out *.stackdump
+	@$(RM) *.o $(BIN) *.d TAGS core vgcore.* gmon.out
 
 clobber: clean
 	@$(ECHO) Removing backup files
@@ -47,4 +42,4 @@ clobber: clean
 
 etags:
 	@$(ECHO) Updating TAGS
-	@etags *.[ch]
+	@etags *.[ch] *.cpp

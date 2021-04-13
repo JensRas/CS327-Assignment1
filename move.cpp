@@ -1,584 +1,339 @@
-#include <cstdint>
-#include <cstdlib>
-#include <ncurses.h>
-
 #include "move.h"
+
+#include <unistd.h>
+#include <stdlib.h>
+#include <assert.h>
+
 #include "dungeon.h"
 #include "heap.h"
-#include "pc.h"
+#include "move.h"
 #include "npc.h"
-#include "pathfinder.h"
-#include "printers.h"
-#include "parsers.h"
+#include "pc.h"
+#include "character.h"
+#include "utils.h"
+#include "path.h"
+#include "event.h"
+#include "io.h"
+#include "npc.h"
 
-static int32_t monster_cmp(const void *first, const void *second);
-
-/*****************************************
- *             Game Runnner              *
- *****************************************/
-void gameRunner(dungeon *d) // This is the problem!!!
+void do_combat(dungeon *d, character *atk, character *def)
 {
-    character *c;
-    heap_t h; 
-    int y, x, i;
-    int ran, ran2;
+  int can_see_atk, can_see_def;
+  const char *organs[] = {
+    "liver",                   /*  0 */
+    "pancreas",                /*  1 */
+    "heart",                   /*  2 */
+    "eye",                     /*  3 */
+    "arm",                     /*  4 */
+    "leg",                     /*  5 */
+    "intestines",              /*  6 */
+    "gall bladder",            /*  7 */
+    "lungs",                   /*  8 */
+    "hand",                    /*  9 */
+    "foot",                    /* 10 */
+    "spinal cord",             /* 11 */
+    "pituitary gland",         /* 12 */
+    "thyroid",                 /* 13 */
+    "tongue",                  /* 14 */
+    "bladder",                 /* 15 */
+    "diaphram",                /* 16 */
+    "stomach",                 /* 17 */
+    "pharynx",                 /* 18 */
+    "esophagus",               /* 19 */
+    "trachea",                 /* 20 */
+    "urethra",                 /* 21 */
+    "spleen",                  /* 22 */
+    "ganglia",                 /* 23 */
+    "ear",                     /* 24 */
+    "subcutaneous tissue"      /* 25 */
+    "cerebellum",              /* 26 */ /* Brain parts begin here */
+    "hippocampus",             /* 27 */
+    "frontal lobe",            /* 28 */
+    "brain",                   /* 29 */
+  };
+  int part;
 
-    heap_init(&h, monster_cmp, NULL); 
-   
-    for(y = 0; y < floorMaxY; y++){
-        for(x = 0; x < floorMaxX; x++){
-            if(d->charMap[y][x]->isPC && d->charMap[y][x]->isAlive) {
-                d->charMap[y][x]->hn = heap_insert(&h, &d->charMap[y][x]);
-            }
-            else 
-                d->charMap[y][x]->hn = NULL;
-        }
-    }
-
-    for(y = 0; y < floorMaxY; y++){
-        for(x = 0; x < floorMaxX; x++){
-            if(d->charMap[y][x]->isAlive && !d->charMap[y][x]->isPC) {
-                d->charMap[y][x]->hn = heap_insert(&h, &d->charMap[y][x]);
-            }
-            else 
-                d->charMap[y][x]->hn = NULL;
-        }
-    }
-
-    while((c = (character*) heap_remove_min(&h))){
-        //printf("x:%d y:%d speed:%d nTurn:%d, sNum:%d type:%x alive:%d\n", c->x, c->y, c->speed, c->nTurn, c->sequenceNum, c->entity.nonPlayer.type, c->isAlive);
-        c->hn = NULL;
-        bool isSmart = false;
-        bool isTele = false;
-        bool isTun = false;
-        bool isErat = false;
-        int realPCY = 0;
-        int realPCX = 0;
-        int pcRoom = 0;
-
-        if(c->isPC){
-            realPCY = c->y;
-            realPCX = c->x;
-        } else { // Monster
-            if(c->entity.nonPlayer.type & BIT_SMART) // Understand layout, move on shortest path (nowhere if no LoS)
-                isSmart = true;
-            if(c->entity.nonPlayer.type & BIT_TELE) // Always knows where PC is, always move toward PC
-                isTele = true;
-            if(c->entity.nonPlayer.type & BIT_TUN) // Tunnel through rock (tunnelling map)
-                isTun = true;
-            if(c->entity.nonPlayer.type & BIT_ERAT) // 50% chance of moving to random neighboring cell
-                isErat = true;
-        }
-
-        // This is probably broken
-        if(!isSmart){
-            c->entity.nonPlayer.knownPCX = 0;
-            c->entity.nonPlayer.knownPCY = 0;
-        }
-        
-        pcRoom = -1;
-        for(i = 0; i < d->numRooms; i++){
-            for(y = d->roomList[i].cornerY; y < d->roomList[i].sizeY; y++){
-                for(x = d->roomList[i].cornerX; x < d->roomList[i].sizeX; x++){
-                    if(d->charMap[y][x]->isPC)
-                        pcRoom = i;
-                }
-            }
-        }
-        if(pcRoom != -1){
-            for(y = d->roomList[pcRoom].cornerY; y < d->roomList[pcRoom].sizeY; y++){
-                for(x = d->roomList[pcRoom].cornerX; x < d->roomList[pcRoom].sizeX; x++){
-                    if(c->x == x && c->y == y){
-                        c->entity.nonPlayer.knownPCY = realPCY;
-                        c->entity.nonPlayer.knownPCX = realPCX;
-                    }
-                }
-            }
-        } else {
-            c->entity.nonPlayer.knownPCX = 0;
-            c->entity.nonPlayer.knownPCY = 0;
-        }
-
-        if(isTele){
-            c->entity.nonPlayer.knownPCX = realPCY;
-            c->entity.nonPlayer.knownPCY = realPCX;    
-        }
-        
-        int temp = 100;
-        int tempY = 0; 
-        int tempX = 0;
-
-        if(c->isAlive){
-            if(isSmart && isTun){
-                for(y = -1; y < 1; y++){
-                    for(x = -1; x < 1; x++){
-                        if(temp > d->tunDist[y + c->y][x + c->x]) {
-                            temp = d->tunDist[y + c->y][x + c->x];
-                            tempY = y + c->y;
-                            tempX = x + c->x;
-                        }
-                    }
-                }
-
-                if(isErat && rand() % 2){
-                    ran = 1, ran2 = 1;
-                    while (ran == 1 || ran2 == 1) {
-                        ran = rand() % 3;
-                        ran2 = rand() % 3;
-                    }
-                    if(d->hardness[c->y - 1 + ran][c->x - 1 + ran2] != 255){ // Check walls
-                        tempY = c->y - 1 + ran;
-                        tempX = c->x - 1 + ran2;
-                    }
-                } 
-                //update hardness
-                if(d->hardness[tempY][tempX] == 0){
-                    if(c->y != tempY && c->x != tempX){
-                        c  = moveMonst(d, tempY, tempX, c);
-                    }
-                }
-                else if (d->hardness[tempY][tempX] > 85) {
-                    d->hardness[tempY][tempX] = d->hardness[tempY][tempX] - 85;
-                    tempY = c->y;
-                    tempX = c->x;
-                }
-                else {
-                    d->hardness[tempY][tempX] = 0; 
-                    d->floor[tempY][tempX] = corridorChar;
-                }
-            } else if (isSmart) { // smart non tunneling possibly telepatic       
-                for(y = -1; y < 1; y++){
-                    for(x = -1; x < 1; x++){
-                        if(temp > d->nonTunDist[y + c->y][x + c->x]){
-                            temp = d->nonTunDist[y + c->y][x + c->x];
-                            tempY = y + c->y;
-                            tempX = x + c->x;
-                        }
-                    }
-                }
-                if(isErat && rand() % 2){
-                    ran = 1, ran2 = 1;
-                    while (ran == 1 || ran2 == 1) {
-                        ran = rand() % 3;
-                        ran2 = rand() % 3;
-                    }
-                    if(d->hardness[c->y - 1 + ran][c->x - 1 + ran2] == 0){ // Check walls
-                        tempY = c->y - 1 + ran;
-                        tempX = c->x - 1 + ran2;
-                    }
-                    if(c->y != tempY && c->x != tempX){
-                        c  = moveMonst(d, tempY, tempX, c);
-                    }
-                }
-
-            } else if (isTun) { // Not smart (No Memory), Tunnling possibly telepathic
-                //gets "straight" direction toward known player location
-                if(c->entity.nonPlayer.knownPCY > c->y){ 
-                    tempY = c->y + 1;
-                } else if(c->entity.nonPlayer.knownPCY < c->y && c->entity.nonPlayer.knownPCY != 0){
-                    tempY = c->y - 1;
-                } else{
-                    tempY = c->y;
-                }
-                if(c->entity.nonPlayer.knownPCX > c->x){ 
-                    tempX = c->x + 1;
-                } else if(c->entity.nonPlayer.knownPCX < c->x && c->entity.nonPlayer.knownPCX != 0){
-                    tempX = c->x - 1;
-                } else{
-                    tempX = c->x;
-                }
-                
-                if(isErat && rand() % 2){
-                    ran = 1, ran2 = 1;
-                    while (ran == 1 || ran2 == 1) {
-                        ran = rand() % 3;
-                        ran2 = rand() % 3;
-                    }
-                    if(d->hardness[c->y - 1 + ran][c->x - 1 + ran2] != 255){ // Check walls
-                        tempY = c->y - 1 + ran;
-                        tempX = c->x - 1 + ran2;
-                    }
-                } 
-                //update hardness
-                if(d->hardness[tempY][tempX] == 0){
-                    if(c->y != tempY && c->x != tempX){
-                        c  = moveMonst(d, tempY, tempX, c);
-                    }
-                }
-                else if (d->hardness[tempY][tempX] > 85 && d->hardness[tempY][tempX] != 255) {
-                    d->hardness[tempY][tempX] = d->hardness[tempY][tempX] - 85;
-                    tempY = c->y;
-                    tempX = c->x;
-                }
-                else {
-                    d->hardness[tempY][tempX] = 0; 
-                    d->floor[tempY][tempX] = corridorChar;
-                }
-            } else { // Not Smart (No memory), Not Tunneling, possibly telepathic
-                if(c->entity.nonPlayer.knownPCY > c->y){ 
-                    tempY = c->y + 1;
-                } else if(c->entity.nonPlayer.knownPCY < c->y && c->entity.nonPlayer.knownPCY != 0){
-                    tempY = c->y - 1;
-                } else {
-                    tempY = c->y;
-                }
-                if(c->entity.nonPlayer.knownPCX > c->x){ 
-                    tempX = c->x + 1;
-                } else if(c->entity.nonPlayer.knownPCX < c->x && c->entity.nonPlayer.knownPCX != 0){
-                    tempX = c->x - 1;
-                } else {
-                    tempX = c->x;
-                }
-
-                if(isErat && rand() % 2){
-                    ran = 1, ran2 = 1;
-                    while (ran == 1 || ran2 == 1) {
-                        ran = rand() % 3;
-                        ran2 = rand() % 3;
-                    }
-                    if(d->hardness[c->y - 1 + ran][c->x - 1 + ran2] == 0){
-                        tempY = c->y - 1 + ran;
-                        tempX = c->x - 1 + ran2;
-                    }
-                }
-                if(c->y != tempY && c->x != tempX){
-                    c  = moveMonst(d, tempY, tempX, c);
-                }
-            }
- 
-            if(c->isAlive){
-                //printf("x:%d y:%d speed:%d nTurn:%d, sNum:%d type:%x alive:%d\n", c->x, c->y, c->speed, c->nTurn, c->sequenceNum, c->entity.nonPlayer.type, c->isAlive);
-                if(c->isPC) {
-                     c->nTurn = c->nTurn + (1000 / c->speed);
-                    heap_insert(&h, c);
-                    updateFog(d);
-                    return;
-                } else {
-                    heap_insert(&h, c);
-                     c->nTurn = c->nTurn + (1000 / c->speed);
-                }
-            }
-        }
-    }
-    heap_delete(&h);
-}
-
-/*****************************************
- *               Run Game                *
- *****************************************/
-void runGame(dungeon *d)
-{
-    character *pc;
-    int entityCount, y, x, key;
-    bool fog = true;
-
-    while(1){
-        key = getch();
-        entityCount = 0;
-        printGame(d, fog);
-        switch (key) {
-            case KEY_HOME:                  // Up Left
-                movePC(d, -1, -1);
-                break;
-            case KEY_UP:                    // Up
-                movePC(d, -1, 0);
-                break;
-            case KEY_PPAGE:                 // Up Right
-                movePC(d, -1, 1);
-                break;
-            case KEY_RIGHT:                 // Right
-                movePC(d, 0, 1);
-                break;
-            case KEY_NPAGE:                 // Down Right
-                movePC(d, 1, 1);
-                break;
-            case KEY_DOWN:                  // Down
-                movePC(d, 1, 0);
-                break;
-            case KEY_END:                   // Down Left
-                movePC(d, 1, -1);
-                break;
-            case KEY_LEFT:                  // Left
-                movePC(d, 0, -1);
-                break;
-            case KEY_B2:                    // Rest
-                
-            case ' ':                       // Rest 
-                
-                break;
-            case '>':                       // Go Down Stairs
-                pc = findPC(d);
-                if(d->floor[pc->y][pc->x] == downChar) {
-                    //dungeonDelete(d);   
-                    gameGen(d);
-                    break;
-                }
-                mvprintw(0, 0, "You have to be on a down staircase to do that!");
-                refresh();
-                break;
-            case '<':                       // Go Up Stairs
-                pc = findPC(d);
-                if(d->floor[pc->y][pc->x] == upChar) {
-                    //dungeonDelete(d);   
-                    gameGen(d);
-                    break;
-                }
-                mvprintw(0, 0, "You have to be on an up staircase to do that!");
-                refresh();
-                break;
-            case '.':                       // Rest
-                
-                break;
-            case '1':                       // Down Left
-                movePC(d, 1, -1);
-                break;
-            case '2':                       // Down
-                movePC(d, 1, 0);
-                break;
-            case '3':                       // Down Right
-                movePC(d, 1, 1);
-                break;
-            case '4':                       // Left
-                movePC(d, 0, -1);
-                break;
-            case '5':                       // Rest
-                
-                break;
-            case '6':                       // Right
-                movePC(d, 0, 1);
-                break;
-            case '7':                       // Up Left
-                movePC(d, -1, -1);
-                break;
-            case '8':                       // Up
-                movePC(d, -1, 0);
-                break;
-            case '9':                       // Up Right
-                movePC(d, -1, 1);
-                break;
-            case 'b':                       // Down Left
-                movePC(d, 1, -1);
-                break;
-            case 'c':                       // Display Character Info
-                mvprintw(0, 0, "c");
-                refresh();
-                continue;
-            case 'd':                       // Drop Item
-                mvprintw(0, 0, "d");
-                refresh();
-                continue;
-            case 'e':                       // Display Equipment
-                mvprintw(0, 0, "e");
-                refresh();
-                continue;
-            case 'f':                       // Toggle "Fog of War"
-                fog = fog ? false : true;
-                printGame(d, fog);
-                continue;
-            case 'g':                       // Teleport
-                curs_set(1);
-                pc = findPC(d);
-                y = pc->y + 1, x = pc->x;
-                move(y, x);
-                while(1) {
-                    refresh();
-                    key = getch();
-                    if(key == 'g'){
-                        movePC(d, y - 1, x, true);
-                        curs_set(0);
-                        break;
-                    } else if (key == 'r'){
-                        curs_set(0);
-                        movePC(d, (rand() % (floorMaxY - 1)) + 1, (rand() % (floorMaxX - 1)) + 1, true);
-                        break;
-                    } else if (key == '1' || key == 'b' || key == KEY_END) { // Down Left
-                        move(++y, --x);
-                        continue;
-                    } else if (key == '4' || key == 'h' || key == KEY_LEFT) { // Left
-                        move(y, --x);
-                        continue;
-                    } else if (key == '7' || key == 'y' || key == KEY_HOME) { // Up Left
-                        move(--y, --x);
-                        continue;
-                    } else if (key == '8' || key == 'k' || key == KEY_UP) { // Up
-                        move(--y, x);
-                        continue;
-                    } else if (key == '9' || key == 'u' || key == KEY_PPAGE) { // Up Right
-                        move(--y, ++x);
-                        continue;
-                    } else if (key == '6' || key == 'l' || key == KEY_RIGHT) { // Right
-                        move(y, ++x);
-                        continue;
-                    } else if (key == '3' || key == 'n' || key == KEY_NPAGE) { // Down Right
-                        move(++y, ++x);
-                        continue;
-                    } else if (key == '2' || key == 'j' || key == KEY_DOWN) { // Down
-                        move(++y, x);
-                        continue;
-                    }
-                }
-                break;
-            case 'h':                       // Left
-                movePC(d, 0, -1);
-                break;
-            case 'i':                       // Display Inventory
-                mvprintw(0, 0, "i");
-                refresh();
-                continue;
-            case 'j':                       // Down
-                movePC(d, 1, 0);
-                break;
-            case 'k':                       // Up
-                movePC(d, -1, 0);
-                break;
-            case 'l':                       // Right
-                movePC(d, 0, 1);
-                break;
-            case 'm':                       // Display Monster List
-                makeMonstList(d);
-                clear();
-                printGame(d, fog);
-                continue;
-            case 'n':                       // Down Right
-                movePC(d, 1, 1);
-                break;
-            case 's':                       // Display the Default Map
-                mvprintw(0, 0, "s");
-                refresh();
-                continue;
-            case 't':                       // Take Off Item
-                mvprintw(0, 0, "t");
-                refresh();
-                continue;
-            case 'u':                       // Up Right
-                movePC(d, -1, 1);
-                break;
-            case 'w':                       // Wear Item
-                mvprintw(0, 0, "w");
-                refresh();
-                continue;
-            case 'x':                       // Expunge Item
-                mvprintw(0, 0, "x");
-                refresh();
-                continue;
-            case 'y':                       // Up Left
-                movePC(d, -1, -1);
-                break;
-            case 'D':                       // Display the Non-Tunneling Map
-                mvprintw(0, 0, "D");
-                refresh();
-                continue;
-            case 'E':                       // Inspect Equipped Item
-                mvprintw(0, 0, "E");
-                refresh();
-                continue;
-            case 'H':                       // Display the Hardness Map
-                mvprintw(0, 0, "H");
-                refresh();
-                continue;
-            case 'I':                       // Inspect Inventory Item
-                mvprintw(0, 0, "I");
-                refresh();
-                continue;
-            case 'L':                       // Look At Monster
-                mvprintw(0, 0, "L");
-                refresh();
-                continue;
-            case 'Q':                       // Quit
-                endwin();
-                return;
-                break;
-            case 'T':                       // Display the Tunneling Map
-                mvprintw(0, 0, "T");
-                refresh();
-                continue;
-            default:                        // Default
-                mvprintw(23, 1, "Unknown key: %o", key);
-                refresh();
-                continue;
-        }
-        
-        gameRunner(d);
-        //check for pc and monsters
-        for(y = 0; y < floorMaxY; y++){
-            for(x = 0; x < floorMaxX; x++){
-                if(d->charMap[y][x]->isPC){
-                    if(!d->charMap[y][x]->isAlive) {
-                        loseGame();
-                        return;
-                    }
-                }
-                if(d->charMap[y][x]->isAlive){
-                    entityCount++;
-                }
-            }
-        }
-        if(entityCount <= 1){
-            winGame();
-            return;
-        }
-
-        printGame(d, fog);
-
-        //usleep(10000 * 60);
-        dijkstra(d, 0);
-        dijkstra(d, 1);
-    }
-    endwin();
-}
-
-/*****************************************
- *           Monster Compare             *
- *****************************************/
-static int32_t monster_cmp(const void *first, const void *second) {
-    character *f = (character *) first;
-    character *s = (character *) second;
-    if (f->nTurn == s->nTurn) {
-        return f->sequenceNum - s->sequenceNum; // Tie-breaker
+  if (def->alive) {
+    def->alive = 0;
+    charpair(def->position) = NULL;
+    
+    if (def != d->PC) {
+      d->num_monsters--;
     } else {
-        return f->nTurn - s->nTurn;
+      if ((part = rand() % (sizeof (organs) / sizeof (organs[0]))) < 26) {
+        io_queue_message("As %s%s eats your %s,", is_unique(atk) ? "" : "the ",
+                         atk->name, organs[rand() % (sizeof (organs) /
+                                                     sizeof (organs[0]))]);
+        io_queue_message("   ...you wonder if there is an afterlife.");
+        /* Queue an empty message, otherwise the game will not pause for *
+         * player to see above.                                          */
+        io_queue_message("");
+      } else {
+        io_queue_message("Your last thoughts fade away as "
+                         "%s%s eats your %s...",
+                         is_unique(atk) ? "" : "the ",
+                         atk->name, organs[part]);
+        io_queue_message("");
+      }
+      /* Queue an empty message, otherwise the game will not pause for *
+       * player to see above.                                          */
+      io_queue_message("");
     }
+    atk->kills[kill_direct]++;
+    atk->kills[kill_avenged] += (def->kills[kill_direct] +
+                                  def->kills[kill_avenged]);
+  }
+
+  if (atk == d->PC) {
+    io_queue_message("You smite %s%s!", is_unique(def) ? "" : "the ", def->name);
+  }
+
+  can_see_atk = can_see(d, character_get_pos(d->PC),
+                        character_get_pos(atk), 1, 0);
+  can_see_def = can_see(d, character_get_pos(d->PC),
+                        character_get_pos(def), 1, 0);
+
+  if (atk != d->PC && def != d->PC) {
+    if (can_see_atk && !can_see_def) {
+      io_queue_message("%s%s callously murders some poor, "
+                       "defenseless creature.",
+                       is_unique(atk) ? "" : "The ", atk->name);
+    }
+    if (can_see_def && !can_see_atk) {
+      io_queue_message("Something kills %s%s.",
+                       is_unique(def) ? "" : "the helpless ", def->name);
+    }
+    if (can_see_atk && can_see_def) {
+      io_queue_message("You watch in abject horror as %s%s "
+                       "gruesomely murders %s%s!",
+                       is_unique(atk) ? "" : "the ", atk->name,
+                       is_unique(def) ? "" : "the ", def->name);
+    }
+  }
 }
 
-/*****************************************
- *              Game Win                 *
- *****************************************/
-void winGame()
+void move_character(dungeon *d, character *c, pair_t next)
 {
-    mvprintw(23, 35, "YOU WIN");
+  if (charpair(next) &&
+      ((next[dim_y] != c->position[dim_y]) ||
+       (next[dim_x] != c->position[dim_x]))) {
+    do_combat(d, c, charpair(next));
+  } else {
+    /* No character in new position. */
+
+    d->character_map[c->position[dim_y]][c->position[dim_x]] = NULL;
+    c->position[dim_y] = next[dim_y];
+    c->position[dim_x] = next[dim_x];
+    d->character_map[c->position[dim_y]][c->position[dim_x]] = c;
+  }
+
+  if (c == d->PC) {
+    pc_reset_visibility(d->PC);
+    pc_observe_terrain(d->PC, d);
+  }
 }
 
-/*****************************************
- *               Game Lose               *
- *****************************************/
-void loseGame()
+void do_moves(dungeon *d)
 {
-    mvprintw(23, 35, "YOU LOSE");
-}
+  pair_t next;
+  character *c;
+  event *e;
 
-/*****************************************
- *             Update Fog                *
- *****************************************/
-void updateFog(dungeon *d)
-{   
-    int y, x;
-    character *pc;
-    pc = findPC(d);
+  /* Remove the PC when it is PC turn.  Replace on next call.  This allows *
+   * use to completely uninit the heap when generating a new level without *
+   * worrying about deleting the PC.                                       */
 
-    for(y = pc->y - fogVision / 2; y <= pc->y + fogVision / 2; y++){
-        for(x = pc->x - fogVision / 2; x <= pc->x + fogVision / 2; x++){
-            if(y < 0 || y > floorMaxY || x < 0 || x > floorMaxX)
-                continue;
-            if(d->charMap[y][x]->isAlive && !d->charMap[y][x]->isPC){
-                char *s = (char*) malloc(1 * sizeof(char*));
-                sprintf(s, "%x", d->charMap[y][x]->entity.nonPlayer.type);
-                d->fogMap[y][x] = *s;
-            } else if(d->charMap[y][x]->isPC) {
-                d->fogMap[y][x] = playerChar;
-            } else {
-                d->fogMap[y][x] = d->floor[y][x];
-            }
-        }
+  if (pc_is_alive(d)) {
+    /* The PC always goes first one a tie, so we don't use new_event().  *
+     * We generate one manually so that we can set the PC sequence       *
+     * number to zero.                                                   */
+    e = (event *) malloc(sizeof (*e));
+    e->type = event_character_turn;
+    /* Hack: New dungeons are marked.  Unmark and ensure PC goes at d->time, *
+     * otherwise, monsters get a turn before the PC.                         */
+    if (d->is_new) {
+      d->is_new = 0;
+      e->time = d->time;
+    } else {
+      e->time = d->time + (1000 / d->PC->speed);
+    }
+    e->sequence = 0;
+    e->c = d->PC;
+    heap_insert(&d->events, e);
+  }
+
+  while (pc_is_alive(d) &&
+         (e = (event *) heap_remove_min(&d->events)) &&
+         ((e->type != event_character_turn) || (e->c != d->PC))) {
+    d->time = e->time;
+    if (e->type == event_character_turn) {
+      c = e->c;
+    }
+    if (!c->alive) {
+      if (d->character_map[c->position[dim_y]][c->position[dim_x]] == c) {
+        d->character_map[c->position[dim_y]][c->position[dim_x]] = NULL;
+      }
+      if (c != d->PC) {
+        event_delete(e);
+      }
+      continue;
     }
 
+    npc_next_pos(d, (npc *) c, next);
+    move_character(d, (npc *) c, next);
+
+    heap_insert(&d->events, update_event(d, e, 1000 / c->speed));
+  }
+
+  io_display(d);
+  if (pc_is_alive(d) && e->c == d->PC) {
+    c = e->c;
+    d->time = e->time;
+    /* Kind of kludgey, but because the PC is never in the queue when   *
+     * we are outside of this function, the PC event has to get deleted *
+     * and recreated every time we leave and re-enter this function.    */
+    e->c = NULL;
+    event_delete(e);
+    io_handle_input(d);
+  }
+}
+
+void dir_nearest_wall(dungeon *d, character *c, pair_t dir)
+{
+  dir[dim_x] = dir[dim_y] = 0;
+
+  if (c->position[dim_x] != 1 && c->position[dim_x] != DUNGEON_X - 2) {
+    dir[dim_x] = (c->position[dim_x] > DUNGEON_X - c->position[dim_x] ? 1 : -1);
+  }
+  if (c->position[dim_y] != 1 && c->position[dim_y] != DUNGEON_Y - 2) {
+    dir[dim_y] = (c->position[dim_y] > DUNGEON_Y - c->position[dim_y] ? 1 : -1);
+  }
+}
+
+uint32_t against_wall(dungeon *d, character *c)
+{
+  return ((mapxy(c->position[dim_x] - 1,
+                 c->position[dim_y]    ) == ter_wall_immutable) ||
+          (mapxy(c->position[dim_x] + 1,
+                 c->position[dim_y]    ) == ter_wall_immutable) ||
+          (mapxy(c->position[dim_x]    ,
+                 c->position[dim_y] - 1) == ter_wall_immutable) ||
+          (mapxy(c->position[dim_x]    ,
+                 c->position[dim_y] + 1) == ter_wall_immutable));
+}
+
+uint32_t in_corner(dungeon *d, character *c)
+{
+  uint32_t num_immutable;
+
+  num_immutable = 0;
+
+  num_immutable += (mapxy(c->position[dim_x] - 1,
+                          c->position[dim_y]    ) == ter_wall_immutable);
+  num_immutable += (mapxy(c->position[dim_x] + 1,
+                          c->position[dim_y]    ) == ter_wall_immutable);
+  num_immutable += (mapxy(c->position[dim_x]    ,
+                          c->position[dim_y] - 1) == ter_wall_immutable);
+  num_immutable += (mapxy(c->position[dim_x]    ,
+                          c->position[dim_y] + 1) == ter_wall_immutable);
+
+  return num_immutable > 1;
+}
+
+static void new_dungeon_level(dungeon *d, uint32_t dir)
+{
+  /* Eventually up and down will be independantly meaningful. *
+   * For now, simply generate a new dungeon.                  */
+
+  switch (dir) {
+  case '<':
+  case '>':
+    new_dungeon(d);
+    break;
+  default:
+    break;
+  }
+}
+
+
+uint32_t move_pc(dungeon *d, uint32_t dir)
+{
+  pair_t next;
+  uint32_t was_stairs = 0;
+  const char *wallmsg[] = {
+    "There's a wall in the way.",
+    "BUMP!",
+    "Ouch!",
+    "You stub your toe.",
+    "You can't go that way.",
+    "You admire the engravings.",
+    "Are you drunk?"
+  };
+
+  next[dim_y] = d->PC->position[dim_y];
+  next[dim_x] = d->PC->position[dim_x];
+
+
+  switch (dir) {
+  case 1:
+  case 2:
+  case 3:
+    next[dim_y]++;
+    break;
+  case 4:
+  case 5:
+  case 6:
+    break;
+  case 7:
+  case 8:
+  case 9:
+    next[dim_y]--;
+    break;
+  }
+  switch (dir) {
+  case 1:
+  case 4:
+  case 7:
+    next[dim_x]--;
+    break;
+  case 2:
+  case 5:
+  case 8:
+    break;
+  case 3:
+  case 6:
+  case 9:
+    next[dim_x]++;
+    break;
+  case '<':
+    if (mappair(d->PC->position) == ter_stairs_up) {
+      was_stairs = 1;
+      new_dungeon_level(d, '<');
+    }
+    break;
+  case '>':
+    if (mappair(d->PC->position) == ter_stairs_down) {
+      was_stairs = 1;
+      new_dungeon_level(d, '>');
+    }
+    break;
+  }
+
+  if (was_stairs) {
+    return 0;
+  }
+
+  if ((dir != '>') && (dir != '<') && (mappair(next) >= ter_floor)) {
+    move_character(d, d->PC, next);
+    dijkstra(d);
+    dijkstra_tunnel(d);
+
+    return 0;
+  } else if (mappair(next) < ter_floor) {
+    io_queue_message(wallmsg[rand() % (sizeof (wallmsg) /
+                                       sizeof (wallmsg[0]))]);
+    io_display(d);
+  }
+
+  return 1;
 }

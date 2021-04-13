@@ -1,128 +1,253 @@
-#include <stdlib.h>
-#include <stdbool.h>
+#include <cstdlib>
+#include <cstring>
+#include <ncurses.h>
 
 #include "dungeon.h"
 #include "pc.h"
+#include "utils.h"
 #include "move.h"
+#include "path.h"
+#include "io.h"
+#include "object.h"
 
-/*****************************************
- *           Player Generator            *
- *****************************************/
-void playerGen(dungeon *d) 
+uint32_t pc_is_alive(dungeon *d)
 {
-    int ranY, ranX, room, x , y;
-    bool placed = false;
-
-    for(y = 0; y < floorMaxY; y++){
-        for(x = 0; x < floorMaxX; x++){
-            d->charMap[y][x]->y = y;
-            d->charMap[y][x]->x = x;
-            d->charMap[y][x]->isPC = 0;
-            d->charMap[y][x]->isAlive = 0;
-            d->charMap[y][x]->speed = 0;
-            d->charMap[y][x]->sequenceNum = 0;
-            d->charMap[y][x]->nTurn = 0;
-        }
-    }
-
-    while(!placed){
-        room = d->numRooms - 1;
-        ranY = d->roomList[room].cornerY + (rand() % d->roomList[room].sizeY);
-        ranX = d->roomList[room].cornerX + (rand() % d->roomList[room].sizeX);
-        
-        if(d->floor[ranY][ranX] != upChar && d->floor[ranY][ranX] != downChar) {
-            d->charMap[ranY][ranX]->y = ranY;
-            d->charMap[ranY][ranX]->x = ranX;
-            d->charMap[ranY][ranX]->isPC = 1;
-            d->charMap[ranY][ranX]->isAlive = 1;
-            d->charMap[ranY][ranX]->speed = 10;
-            d->charMap[ranY][ranX]->sequenceNum = 0;
-            placed = true;
-        }
-    }
+  return d->PC->alive;
 }
 
-/*****************************************
- *             Player Mover              *
- *****************************************/
-void movePC(dungeon *d, int yOff, int xOff)
+void place_pc(dungeon *d)
 {
-    int y, x, oldY, oldX, tempY, tempX;
-    character *pc; 
+  d->PC->position[dim_y] = rand_range(d->rooms->position[dim_y],
+                                     (d->rooms->position[dim_y] +
+                                      d->rooms->size[dim_y] - 1));
+  d->PC->position[dim_x] = rand_range(d->rooms->position[dim_x],
+                                     (d->rooms->position[dim_x] +
+                                      d->rooms->size[dim_x] - 1));
 
-    for(y = 0; y < floorMaxY; y++){
-        for(x = 0; x < floorMaxX; x++){
-            if(d->charMap[y][x]->isPC)
-                pc = d->charMap[y][x];
-        }
-    }
-    
-    tempY = yOff + pc->y;
-    tempX = xOff + pc->x;
-    if(d->floor[tempY][tempX] == rockChar)
-        return;
-    oldY = pc->y;
-    oldX = pc->x;
-    pc->y = tempY;
-    pc->x = tempX;
-    d->charMap[tempY][tempX] = pc;
-    d->charMap[oldY][oldX]->y = oldY;
-    d->charMap[oldY][oldX]->x = oldX;
-    d->charMap[oldY][oldX]->speed = 0;
-    d->charMap[oldY][oldX]->nTurn = 0;
-    d->charMap[oldY][oldX]->isPC = 0;
-    d->charMap[oldY][oldX]->isAlive = 0;
-    d->charMap[oldY][oldX]->sequenceNum = 0;
-    d->charMap[oldY][oldX]->entity.nonPlayer.type = 0;
-
-    updateFog(d);
+  pc_init_known_terrain(d->PC);
+  pc_observe_terrain(d->PC, d);
 }
 
-/*****************************************
- *           Player Mover 2              *
- *****************************************/
-void movePC(dungeon *d, int newY, int newX, bool override)
+void config_pc(dungeon *d)
 {
-    int y, x, oldY, oldX;
-    character *pc; 
+  static dice pc_dice(0, 1, 4);
+  
+  d->PC = new pc;
 
-    for(y = 0; y < floorMaxY; y++){
-        for(x = 0; x < floorMaxX; x++){
-            if(d->charMap[y][x]->isPC)
-                pc = d->charMap[y][x];
-        }
-    }
-    
-    if(d->floor[newY][newX] == rockChar && !override)
-        return;
+  d->PC->symbol = '@';
 
-    oldY = pc->y;
-    oldX = pc->x;
-    pc->y = newY;
-    pc->x = newX;
-    d->charMap[newY][newX] = pc;
-    d->charMap[oldY][oldX]->y = oldY;
-    d->charMap[oldY][oldX]->x = oldX;
-    d->charMap[oldY][oldX]->speed = 0;
-    d->charMap[oldY][oldX]->nTurn = 0;
-    d->charMap[oldY][oldX]->isPC = 0;
-    d->charMap[oldY][oldX]->isAlive = 0;
-    d->charMap[oldY][oldX]->sequenceNum = 0;
-    d->charMap[oldY][oldX]->entity.nonPlayer.type = 0;
+  place_pc(d);
+
+  d->PC->speed = PC_SPEED;
+  d->PC->alive = 1;
+  d->PC->sequence_number = 0;
+  d->PC->kills[kill_direct] = d->PC->kills[kill_avenged] = 0;
+  d->PC->color.push_back(COLOR_WHITE);
+  d->PC->damage = &pc_dice;
+  d->PC->name = "Isabella Garcia-Shapiro";
+
+  d->character_map[d->PC->position[dim_y]][d->PC->position[dim_x]] = d->PC;
+
+  dijkstra(d);
+  dijkstra_tunnel(d);
 }
 
-/*****************************************
- *            Find the Player            *
- *****************************************/
-character *findPC(dungeon *d)
+uint32_t pc_next_pos(dungeon *d, pair_t dir)
 {
-    int x, y;
-    for (y = 0; y < floorMaxY; y++) {
-        for (x = 0; x < floorMaxX; x++) {
-            if (d->charMap[y][x]->isPC) {
-                return d->charMap[y][x];
-            }
-        }
+  static uint32_t have_seen_corner = 0;
+  static uint32_t count = 0;
+
+  dir[dim_y] = dir[dim_x] = 0;
+
+  if (in_corner(d, d->PC)) {
+    if (!count) {
+      count = 1;
     }
-    return NULL;
+    have_seen_corner = 1;
+  }
+
+  /* First, eat anybody standing next to us. */
+  if (charxy(d->PC->position[dim_x] - 1, d->PC->position[dim_y] - 1)) {
+    dir[dim_y] = -1;
+    dir[dim_x] = -1;
+  } else if (charxy(d->PC->position[dim_x], d->PC->position[dim_y] - 1)) {
+    dir[dim_y] = -1;
+  } else if (charxy(d->PC->position[dim_x] + 1, d->PC->position[dim_y] - 1)) {
+    dir[dim_y] = -1;
+    dir[dim_x] = 1;
+  } else if (charxy(d->PC->position[dim_x] - 1, d->PC->position[dim_y])) {
+    dir[dim_x] = -1;
+  } else if (charxy(d->PC->position[dim_x] + 1, d->PC->position[dim_y])) {
+    dir[dim_x] = 1;
+  } else if (charxy(d->PC->position[dim_x] - 1, d->PC->position[dim_y] + 1)) {
+    dir[dim_y] = 1;
+    dir[dim_x] = -1;
+  } else if (charxy(d->PC->position[dim_x], d->PC->position[dim_y] + 1)) {
+    dir[dim_y] = 1;
+  } else if (charxy(d->PC->position[dim_x] + 1, d->PC->position[dim_y] + 1)) {
+    dir[dim_y] = 1;
+    dir[dim_x] = 1;
+  } else if (!have_seen_corner || count < 250) {
+    /* Head to a corner and let most of the NPCs kill each other off */
+    if (count) {
+      count++;
+    }
+    if (!against_wall(d, d->PC) && ((rand() & 0x111) == 0x111)) {
+      dir[dim_x] = (rand() % 3) - 1;
+      dir[dim_y] = (rand() % 3) - 1;
+    } else {
+      dir_nearest_wall(d, d->PC, dir);
+    }
+  }else {
+    /* And after we've been there, let's head toward the center of the map. */
+    if (!against_wall(d, d->PC) && ((rand() & 0x111) == 0x111)) {
+      dir[dim_x] = (rand() % 3) - 1;
+      dir[dim_y] = (rand() % 3) - 1;
+    } else {
+      dir[dim_x] = ((d->PC->position[dim_x] > DUNGEON_X / 2) ? -1 : 1);
+      dir[dim_y] = ((d->PC->position[dim_y] > DUNGEON_Y / 2) ? -1 : 1);
+    }
+  }
+
+  /* Don't move to an unoccupied location if that places us next to a monster */
+  if (!charxy(d->PC->position[dim_x] + dir[dim_x],
+              d->PC->position[dim_y] + dir[dim_y]) &&
+      ((charxy(d->PC->position[dim_x] + dir[dim_x] - 1,
+               d->PC->position[dim_y] + dir[dim_y] - 1) &&
+        (charxy(d->PC->position[dim_x] + dir[dim_x] - 1,
+                d->PC->position[dim_y] + dir[dim_y] - 1) != d->PC)) ||
+       (charxy(d->PC->position[dim_x] + dir[dim_x] - 1,
+               d->PC->position[dim_y] + dir[dim_y]) &&
+        (charxy(d->PC->position[dim_x] + dir[dim_x] - 1,
+                d->PC->position[dim_y] + dir[dim_y]) != d->PC)) ||
+       (charxy(d->PC->position[dim_x] + dir[dim_x] - 1,
+               d->PC->position[dim_y] + dir[dim_y] + 1) &&
+        (charxy(d->PC->position[dim_x] + dir[dim_x] - 1,
+                d->PC->position[dim_y] + dir[dim_y] + 1) != d->PC)) ||
+       (charxy(d->PC->position[dim_x] + dir[dim_x],
+               d->PC->position[dim_y] + dir[dim_y] - 1) &&
+        (charxy(d->PC->position[dim_x] + dir[dim_x],
+                d->PC->position[dim_y] + dir[dim_y] - 1) != d->PC)) ||
+       (charxy(d->PC->position[dim_x] + dir[dim_x],
+               d->PC->position[dim_y] + dir[dim_y] + 1) &&
+        (charxy(d->PC->position[dim_x] + dir[dim_x],
+                d->PC->position[dim_y] + dir[dim_y] + 1) != d->PC)) ||
+       (charxy(d->PC->position[dim_x] + dir[dim_x] + 1,
+               d->PC->position[dim_y] + dir[dim_y] - 1) &&
+        (charxy(d->PC->position[dim_x] + dir[dim_x] + 1,
+                d->PC->position[dim_y] + dir[dim_y] - 1) != d->PC)) ||
+       (charxy(d->PC->position[dim_x] + dir[dim_x] + 1,
+               d->PC->position[dim_y] + dir[dim_y]) &&
+        (charxy(d->PC->position[dim_x] + dir[dim_x] + 1,
+                d->PC->position[dim_y] + dir[dim_y]) != d->PC)) ||
+       (charxy(d->PC->position[dim_x] + dir[dim_x] + 1,
+               d->PC->position[dim_y] + dir[dim_y] + 1) &&
+        (charxy(d->PC->position[dim_x] + dir[dim_x] + 1,
+                d->PC->position[dim_y] + dir[dim_y] + 1) != d->PC)))) {
+    dir[dim_x] = dir[dim_y] = 0;
+  }
+
+  return 0;
+}
+
+uint32_t pc_in_room(dungeon *d, uint32_t room)
+{
+  if ((room < d->num_rooms)                                     &&
+      (d->PC->position[dim_x] >= d->rooms[room].position[dim_x]) &&
+      (d->PC->position[dim_x] < (d->rooms[room].position[dim_x] +
+                                d->rooms[room].size[dim_x]))    &&
+      (d->PC->position[dim_y] >= d->rooms[room].position[dim_y]) &&
+      (d->PC->position[dim_y] < (d->rooms[room].position[dim_y] +
+                                d->rooms[room].size[dim_y]))) {
+    return 1;
+  }
+
+  return 0;
+}
+
+void pc_learn_terrain(pc *p, pair_t pos, terrain_type ter)
+{
+  p->known_terrain[pos[dim_y]][pos[dim_x]] = ter;
+  p->visible[pos[dim_y]][pos[dim_x]] = 1;
+}
+
+void pc_reset_visibility(pc *p)
+{
+  uint32_t y, x;
+
+  for (y = 0; y < DUNGEON_Y; y++) {
+    for (x = 0; x < DUNGEON_X; x++) {
+      p->visible[y][x] = 0;
+    }
+  }
+}
+
+terrain_type pc_learned_terrain(pc *p, int16_t y, int16_t x)
+{
+  if (y < 0 || y >= DUNGEON_Y || x < 0 || x >= DUNGEON_X) {
+    io_queue_message("Invalid value to %s: %d, %d", __FUNCTION__, y, x);
+  }
+
+  return p->known_terrain[y][x];
+}
+
+void pc_init_known_terrain(pc *p)
+{
+  uint32_t y, x;
+
+  for (y = 0; y < DUNGEON_Y; y++) {
+    for (x = 0; x < DUNGEON_X; x++) {
+      p->known_terrain[y][x] = ter_unknown;
+      p->visible[y][x] = 0;
+    }
+  }
+}
+
+void pc_observe_terrain(pc *p, dungeon *d)
+{
+  pair_t where;
+  int16_t y_min, y_max, x_min, x_max;
+
+  y_min = p->position[dim_y] - PC_VISUAL_RANGE;
+  if (y_min < 0) {
+    y_min = 0;
+  }
+  y_max = p->position[dim_y] + PC_VISUAL_RANGE;
+  if (y_max > DUNGEON_Y - 1) {
+    y_max = DUNGEON_Y - 1;
+  }
+  x_min = p->position[dim_x] - PC_VISUAL_RANGE;
+  if (x_min < 0) {
+    x_min = 0;
+  }
+  x_max = p->position[dim_x] + PC_VISUAL_RANGE;
+  if (x_max > DUNGEON_X - 1) {
+    x_max = DUNGEON_X - 1;
+  }
+
+  for (where[dim_y] = y_min; where[dim_y] <= y_max; where[dim_y]++) {
+    where[dim_x] = x_min;
+    can_see(d, p->position, where, 1, 1);
+    where[dim_x] = x_max;
+    can_see(d, p->position, where, 1, 1);
+  }
+  /* Take one off the x range because we alreay hit the corners above. */
+  for (where[dim_x] = x_min - 1; where[dim_x] <= x_max - 1; where[dim_x]++) {
+    where[dim_y] = y_min;
+    can_see(d, p->position, where, 1, 1);
+    where[dim_y] = y_max;
+    can_see(d, p->position, where, 1, 1);
+  }       
+}
+
+int32_t is_illuminated(pc *p, int16_t y, int16_t x)
+{
+  return p->visible[y][x];
+}
+
+void pc_see_object(character *the_pc, object *o)
+{
+  if (o) {
+    o->has_been_seen();
+  }
 }

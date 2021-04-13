@@ -1,140 +1,118 @@
 #ifndef DUNGEON_H
-#define DUNGEON_H
+# define DUNGEON_H
 
-#include <string>
-#include <cstring>
-#include <vector>
+# include <vector>
 
-#include "heap.h"
-#include "pc.h"
-#include "npc.h"
-#include "item.h"
-#include "dice.h"
+# include "heap.h"
+# include "dims.h"
+# include "character.h"
+# include "descriptions.h"
 
-#define minRoomNumber       6
-#define maxRoomNumber      10
-#define maxStairNum         3        // Arbitrary value that can be changed
-#define maxRoomSize        10        // Arbitrary value that can be changed
-#define minRoomX            4
-#define minRoomY            3
-#define floorMaxX          80
-#define floorMaxY          21
-#define fogVision           5
-#define maxItems           10
+#define DUNGEON_X              80
+#define DUNGEON_Y              21
+#define MIN_ROOMS              6
+#define MAX_ROOMS              10
+#define ROOM_MIN_X             4
+#define ROOM_MIN_Y             3
+#define ROOM_MAX_X             20
+#define ROOM_MAX_Y             15
+#define PC_VISUAL_RANGE        3
+#define NPC_VISUAL_RANGE       15
+#define PC_SPEED               10
+#define NPC_MIN_SPEED          5
+#define NPC_MAX_SPEED          20
+#define MAX_MONSTERS           15
+#define MAX_OBJECTS            15
+#define SAVE_DIR               ".rlg327"
+#define DUNGEON_SAVE_FILE      "dungeon"
+#define DUNGEON_SAVE_SEMANTIC  "RLG327-" TERM
+#define DUNGEON_SAVE_VERSION   0U
+#define MONSTER_DESC_FILE      "monster_desc.txt"
+#define OBJECT_DESC_FILE       "object_desc.txt"
 
-#define dimY                0
-#define dimX                1
+#define mappair(pair) (d->map[pair[dim_y]][pair[dim_x]])
+#define mapxy(x, y) (d->map[y][x])
+#define hardnesspair(pair) (d->hardness[pair[dim_y]][pair[dim_x]])
+#define hardnessxy(x, y) (d->hardness[y][x])
+#define charpair(pair) (d->character_map[pair[dim_y]][pair[dim_x]])
+#define charxy(x, y) (d->character_map[y][x])
+#define objpair(pair) (d->objmap[pair[dim_y]][pair[dim_x]])
+#define objxy(x, y) (d->objmap[y][x])
 
-#define edgeChar           '#'        //Hardness = 255
-#define roomChar           ' '        //Hardness = 0
-#define corridorChar       'o'        //Hardness = 0
-#define rockChar           '.'        //Hardness = 100 (Non-zero, non-255)
-#define upChar             '<'        //Hardness = 0
-#define downChar           '>'        //Hardness = 0
-#define playerChar         '@'
-
-#define invalidChar        '*'
-#define weaponChar         '|'
-#define offhandChar        ')'
-#define rangedChar         '}'
-#define armorChar          '['
-#define helmetChar         ']'
-#define cloakChar          '('
-#define glovesChar         '{'
-#define bootsChar          '\\'
-#define ringChar           '='
-#define amuletChar         '"'
-#define lightChar          '_'
-#define scrollChar         '~'
-#define bookChar           '?'
-#define flaskChar          '!'
-#define goldChar           '$'
-#define ammunitionChar     '/'
-#define foodChar           ','
-#define wandChar           '-'
-#define containerChar      '%'
-#define stackChar          '&'
-
-typedef int16_t pair_t[2];
-class item;
-class monDesc1;
-class itemDesc;
+enum __attribute__ ((__packed__)) terrain_type {
+  ter_debug,
+  ter_unknown,
+  ter_wall,
+  ter_wall_immutable,
+  ter_floor,
+  ter_floor_room,
+  ter_floor_hall,
+  ter_stairs,
+  ter_stairs_up,
+  ter_stairs_down
+};
 
 typedef struct room {
-    int8_t cornerX;     // Top left corner
-    int8_t cornerY;     // Top left corner
-    int8_t sizeX;
-    int8_t sizeY;
-} room;
+  pair_t position;
+  pair_t size;
+} room_t;
 
-typedef struct stair {
-    int8_t x;
-    int8_t y;
-} stair;
-
-typedef struct corPath {
-  heap_node_t *hn;
-  uint8_t pos[2];
-  int32_t cost;
-} corPath;
-
-class character {
-    public:
-        virtual ~character() {}
-        heap_node_t *hn;
-        int8_t x;
-        int8_t y;
-        char symbol;
-        int32_t color;
-        int32_t speed;
-        int nTurn;
-        int8_t isPC;
-        int32_t isAlive;
-        int32_t hp;
-        const dice *dam;
-        const char *name;
-        int32_t sequenceNum;
-        union Entity {
-            Entity();
-            ~Entity();
-            pc player;
-            npc nonPlayer;
-        } entity;
-        inline char get_symbol() { return symbol; }
-};
+class pc;
+class object;
 
 class dungeon {
-    public:
-        dungeon() : floor{rockChar}, hardness{0}, nonTunDist{0}, 
-                    tunDist{0}, charMap{0}, monDesc(), objDesc(),
-                    numItems(0), numRooms(0), numMon(0) {}
-        corPath path[floorMaxY][floorMaxX];
-        char floor[floorMaxY][floorMaxX];
-        char fogMap[floorMaxY][floorMaxX];
-        uint8_t hardness[floorMaxY][floorMaxX];
-        uint8_t nonTunDist[floorMaxY][floorMaxX];
-        uint8_t tunDist[floorMaxY][floorMaxX];
-        character *charMap[floorMaxY][floorMaxX];
-        item *itemMap[floorMaxY][floorMaxX];
-        std::vector<monDesc1> monDesc;
-        std::vector<itemDesc> objDesc;
-        std::string monVersion;
-        std::string objVersion;
-        room *roomList;
-        stair *stairListU;
-        stair *stairListD;
-        int16_t numItems;
-        int16_t numRooms;
-        int16_t numUStairs;
-        int16_t numDStairs;
-        int numMon;
+ public:
+  dungeon() : num_rooms(0), rooms(0), map{ter_wall}, hardness{0},
+              pc_distance{0}, pc_tunnel{0}, character_map{0}, PC(0),
+              num_monsters(0), max_monsters(0), character_sequence_number(0),
+              time(0), is_new(0), quit(0), monster_descriptions(),
+              object_descriptions() {}
+  uint32_t num_rooms;
+  room_t *rooms;
+  terrain_type map[DUNGEON_Y][DUNGEON_X];
+  /* Since hardness is usually not used, it would be expensive to pull it *
+   * into cache every time we need a map cell, so we store it in a        *
+   * parallel array, rather than using a structure to represent the       *
+   * cells.  We may want a cell structure later, but from a performanace  *
+   * perspective, it would be a bad idea to ever have the map be part of  *
+   * that structure.  Pathfinding will require efficient use of the map,  *
+   * and pulling in unnecessary data with each map cell would add a lot   *
+   * of overhead to the memory system.                                    */
+  uint8_t hardness[DUNGEON_Y][DUNGEON_X];
+  uint8_t pc_distance[DUNGEON_Y][DUNGEON_X];
+  uint8_t pc_tunnel[DUNGEON_Y][DUNGEON_X];
+  character *character_map[DUNGEON_Y][DUNGEON_X];
+  object *objmap[DUNGEON_Y][DUNGEON_X];
+  pc *PC;
+  heap_t events;
+  uint16_t num_monsters;
+  uint16_t max_monsters;
+  uint16_t num_objects;
+  uint16_t max_objects;
+   uint32_t character_sequence_number;
+  /* Game time isn't strictly necessary.  It's implicit in the turn number *
+   * of the most recent thing removed from the event queue; however,       *
+   * including it here--and keeping it up to date--provides a measure of   *
+   * convenience, e.g., the ability to create a new event without explicit *
+   * information from the current event.                                   */
+  uint32_t time;
+  uint32_t is_new;
+  uint32_t quit;
+  std::vector<monster_description> monster_descriptions;
+  std::vector<object_description> object_descriptions;
 };
 
-void corridorGen(dungeon *d);
-void borderGen(dungeon *d);
-void roomGen(dungeon *d);
-void staircaseGen(dungeon *d);
-void dungeonDelete(dungeon *d);
-void gameGen(dungeon *d);
+void init_dungeon(dungeon *d);
+void new_dungeon(dungeon *d);
+void delete_dungeon(dungeon *d);
+int gen_dungeon(dungeon *d);
+void render_dungeon(dungeon *d);
+int write_dungeon(dungeon *d, char *file);
+int read_dungeon(dungeon *d, char *file);
+int read_pgm(dungeon *d, char *pgm);
+void render_distance_map(dungeon *d);
+void render_tunnel_distance_map(dungeon *d);
+void init_dungeon(dungeon *d);
+void pc_see_object(character *the_pc, object *o);
 
 #endif
