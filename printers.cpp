@@ -196,43 +196,43 @@ void printObjDef(dungeon *d)
         if (d->objDesc[i].color & BIT_WHITE)
             strColor += "WHITE ";
         // Construct type string from bitvector
-        if (d->objDesc[i].type & BIT_WEAPON)
+        if (d->objDesc[i].type == itemtype_WEAPON)
             strType += "WEAPON ";
-        if (d->objDesc[i].type & BIT_OFFHAND) 
+        if (d->objDesc[i].type == itemtype_OFFHAND) 
             strType += "OFFHAND ";
-        if (d->objDesc[i].type & BIT_RANGED)
+        if (d->objDesc[i].type == itemtype_RANGED)
             strType += "RANGED ";
-        if (d->objDesc[i].type & BIT_ARMOR)
+        if (d->objDesc[i].type == itemtype_ARMOR)
             strType += "ARMOR ";
-        if (d->objDesc[i].type & BIT_HELMET)
+        if (d->objDesc[i].type == itemtype_HELMET)
             strType += "HELMET ";
-        if (d->objDesc[i].type & BIT_CLOAK)
+        if (d->objDesc[i].type == itemtype_CLOAK)
             strType += "CLOAK ";
-        if (d->objDesc[i].type & BIT_GLOVES)
+        if (d->objDesc[i].type == itemtype_GLOVES)
             strType += "GLOVES ";
-        if (d->objDesc[i].type & BIT_BOOTS)
+        if (d->objDesc[i].type == itemtype_BOOTS)
             strType += "BOOTS ";
-        if (d->objDesc[i].type & BIT_RING)
+        if (d->objDesc[i].type == itemtype_RING)
             strType += "RING ";
-        if (d->objDesc[i].type & BIT_AMULET) 
+        if (d->objDesc[i].type == itemtype_AMULET) 
             strType += "AMULET ";
-        if (d->objDesc[i].type & BIT_LIGHT)
+        if (d->objDesc[i].type == itemtype_LIGHT)
             strType += "LIGHT ";
-        if (d->objDesc[i].type & BIT_SCROLL)
+        if (d->objDesc[i].type == itemtype_SCROLL)
             strType += "SCROLL ";
-        if (d->objDesc[i].type & BIT_BOOK)
+        if (d->objDesc[i].type == itemtype_BOOK)
             strType += "BOOK ";
-        if (d->objDesc[i].type & BIT_FLASK)
+        if (d->objDesc[i].type == itemtype_FLASK)
             strType += "FLASK ";
-        if (d->objDesc[i].type & BIT_GOLD)
+        if (d->objDesc[i].type == itemtype_GOLD)
             strType += "GOLD ";
-        if (d->objDesc[i].type & BIT_AMMUNITION)
+        if (d->objDesc[i].type == itemtype_AMMUNITION)
             strType += "AMMUNITION ";
-        if (d->objDesc[i].type & BIT_FOOD)
+        if (d->objDesc[i].type == itemtype_FOOD)
             strType += "FOOD ";
-        if (d->objDesc[i].type & BIT_WAND)
+        if (d->objDesc[i].type == itemtype_WAND)
             strType += "WAND ";
-        if (d->objDesc[i].type & BIT_CONTAINER)
+        if (d->objDesc[i].type == itemtype_CONTAINER)
             strType += "CONTAINER ";
 
         // Very long print statement that could probably be written easier. 

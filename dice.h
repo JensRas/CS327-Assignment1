@@ -1,6 +1,8 @@
 #ifndef DICE_H
 #define DICE_H
 
+#include <stdint.h>
+
 class dice {
     public:
         uint32_t base = 0;
@@ -18,7 +20,7 @@ class dice {
         {
             return sides;
         }
-        int rollDice(dice die);
+        int32_t rollDice(void) const;
         
 };
 

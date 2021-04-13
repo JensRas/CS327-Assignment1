@@ -108,7 +108,6 @@ class dungeon {
         dungeon() : floor{rockChar}, hardness{0}, nonTunDist{0}, 
                     tunDist{0}, charMap{0}, monDesc(), objDesc(),
                     numItems(0), numRooms(0), numMon(0) {}
-        ~dungeon();
         corPath path[floorMaxY][floorMaxX];
         char floor[floorMaxY][floorMaxX];
         char fogMap[floorMaxY][floorMaxX];

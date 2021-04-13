@@ -3,6 +3,7 @@
 #include "item.h"
 #include "dice.h"
 #include "dungeon.h"
+#include "parsers.h"
 
 # define rand_range(min, max) ((rand() % (((max) + 1) - (min))) + (min))
 
@@ -15,13 +16,13 @@ item::item(itemDesc &it, int16_t posY, int16_t posX, item *next) :
     type(it.get_type()),
     color(it.get_color()),
     dam(it.get_dam()),
-    hit(rollDice(it.get_hit())),
-    dodge(rollDice(it.get_dodge())),
-    def(rollDice(it.get_def())),
-    weight(rollDice(it.get_weight())),
-    speed(rollDice(it.get_speed())),
-    attr(rollDice(it.get_attr())),
-    val(rollDice(it.get_val())),
+    hit(it.get_hit().rollDice()),
+    dodge(it.get_dodge().rollDice()),
+    def(it.get_def().rollDice()),
+    weight(it.get_weight().rollDice()),
+    speed(it.get_speed().rollDice()),
+    attr(it.get_attr().rollDice()),
+    val(it.get_val().rollDice()),
     seen(false),
     next(next),
     id(it)
@@ -42,6 +43,7 @@ void gen_item(dungeon *d)
 {
   item *it;
   uint32_t room;
+  int y, x;
   std::vector<itemDesc> &v = d->objDesc;
   int i;
 
@@ -51,15 +53,15 @@ void gen_item(dungeon *d)
   
   room = rand_range(0, d->numRooms - 1);
   do {
-    it->posY = rand_range(d->roomList[room].cornerY,
+    y = rand_range(d->roomList[room].cornerY,
                           (d->roomList[room].cornerY +
                            d->roomList[room].sizeY - 1));
-    it->posX = rand_range(d->roomList[room].cornerX,
+    x = rand_range(d->roomList[room].cornerX,
                           (d->roomList[room].cornerX +
                            d->roomList[room].sizeX - 1));
-  } while (d->floor[it->posY][it->posX] == upChar || d->floor[it->posY][it->posX] == downChar);
+  } while (d->floor[y][x] == upChar || d->floor[y][x] == downChar); // > 
 
-  it = new item(v[i], it->posY, it->posX, d->itemMap[it->posY][it->posX]);
+  it = new item(v[i], y, x, d->itemMap[y][x]);
 
   d->itemMap[it->posY][it->posX] = it;
   
@@ -100,7 +102,7 @@ int32_t item::get_speed()
 
 int32_t item::roll_dice()
 {
-  return dam.roll();
+  return dam.rollDice();
 }
 
 void destroy_items(dungeon *d)

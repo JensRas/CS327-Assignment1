@@ -13,6 +13,7 @@
 #include "pathfinder.h"
 #include "printers.h"
 #include "move.h"
+#include "dice.h"
 
 /*****************************************
  *           Border Generator            *

@@ -9,6 +9,29 @@
 #include "pc.h"
 #include "parsers.h"
 
+const char item_symbol[] = {
+  '*', /* itemtype_no_type */
+  '|', /* itemtype_WEAPON */
+  ')', /* itemtype_OFFHAND */
+  '}', /* itemtype_RANGED */
+  '~', /* itemtype_LIGHT */
+  '[', /* itemtype_ARMOR */
+  ']', /* itemtype_HELMET */
+  '(', /* itemtype_CLOAK */
+  '{', /* itemtype_GLOVES */
+  '\\', /* itemtype_BOOTS */
+  '"', /* itemtype_AMULET */
+  '=', /* itemtype_RING */
+  '`', /* itemtype_SCROLL */
+  '?', /* itemtype_BOOK */
+  '!', /* itemtype_FLASK */
+  '$', /* itemtype_GOLD */
+  '/', /* itemtype_AMMUNITION */
+  ',', /* itemtype_FOOD */
+  '-', /* itemtype_WAND */
+  '%', /* itemtype_CONTAINER */
+};
+
 /*****************************************
  *            Monster Parser             *
  *****************************************/
@@ -55,7 +78,7 @@ int parseMonFile(std::fstream &f, dungeon *d)
                     std::getline(f, str); 
                     break;
                 }
-            // Bitvector assinments check first if 0
+            // Bitvector assignments check first if 0
             } else if (str.find("COLOR") != std::string::npos && monster.color == 0) {
                 str.erase(0, str.find(delimiter) + delimiter.length());
                 s = str;
@@ -210,46 +233,46 @@ int parseObjFile(std::fstream &f, dungeon *d)
                     str.erase(0, pos + delimiter.length());
 
                     if (s == "WEAPON")
-                        obj.type |= BIT_WEAPON;
+                        obj.type = itemtype_WEAPON;
                     else if (s == "OFFHAND") 
-                        obj.type |= BIT_OFFHAND;
+                        obj.type = itemtype_OFFHAND;
                     else if (s == "RANGED")
-                        obj.type |= BIT_RANGED;
+                        obj.type = itemtype_RANGED;
                     else if (s == "ARMOR")
-                        obj.type |= BIT_ARMOR;
+                        obj.type = itemtype_ARMOR;
                     else if (s == "HELMET")
-                        obj.type |= BIT_HELMET;
+                        obj.type = itemtype_HELMET;
                     else if (s == "CLOAK")
-                        obj.type |= BIT_CLOAK;
+                        obj.type = itemtype_CLOAK;
                     else if (s == "GLOVES")
-                        obj.type |= BIT_GLOVES;
+                        obj.type = itemtype_GLOVES;
                     else if (s == "BOOTS")
-                        obj.type |= BIT_BOOTS;
+                        obj.type = itemtype_BOOTS;
                     else if (s == "RING")
-                        obj.type |= BIT_RING;
+                        obj.type = itemtype_RING;
                     else if (s == "AMULET")
-                        obj.type |= BIT_AMULET;
+                        obj.type = itemtype_AMULET;
                     else if (s == "LIGHT")
-                        obj.type |= BIT_LIGHT;
+                        obj.type = itemtype_LIGHT;
                     else if (s == "SCROLL")
-                        obj.type |= BIT_SCROLL;
+                        obj.type = itemtype_SCROLL;
                     else if (s == "BOOK")
-                        obj.type |= BIT_BOOK;
+                        obj.type = itemtype_BOOK;
                     else if (s == "FLASK")
-                        obj.type |= BIT_FLASK;
+                        obj.type = itemtype_FLASK;
                     else if (s == "GOLD")
-                        obj.type |= BIT_GOLD;
+                        obj.type = itemtype_GOLD;
                     else if (s == "AMMUNITION")
-                        obj.type |= BIT_AMMUNITION;
+                        obj.type = itemtype_AMMUNITION;
                     else if (s == "FOOD")
-                        obj.type |= BIT_FOOD;
+                        obj.type = itemtype_FOOD;
                     else if (s == "WAND")
-                        obj.type |= BIT_WAND;
+                        obj.type = itemtype_WAND;
                     else if (s == "CONTAINER")
-                        obj.type |= BIT_CONTAINER;                
+                        obj.type = itemtype_CONTAINER;                
 
                     if (pos == std::string::npos)
-                        break;                  
+                        break;
                 }
             } else if (str.find("COLOR") != std::string::npos && obj.color == 0) {
                 str.erase(0, str.find(delimiter) + delimiter.length());

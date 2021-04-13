@@ -13,6 +13,9 @@
 #include "move.h"
 #include "printers.h"
 #include "parsers.h"
+#include "item.h"
+#include "npc.h"
+#include "pc.h"
 
 /*****************************************
  *                Main                   *

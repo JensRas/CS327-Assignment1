@@ -21,7 +21,7 @@
 #define BIT_YELLOW      0x40
 #define BIT_WHITE       0x80
 // Object types
-#define BIT_WEAPON      0x1
+/* #define BIT_WEAPON      0x1
 #define BIT_OFFHAND     0x2
 #define BIT_RANGED      0x4
 #define BIT_ARMOR       0x8
@@ -39,8 +39,32 @@
 #define BIT_AMMUNITION  0x8000
 #define BIT_FOOD        0x10000
 #define BIT_WAND        0x20000
-#define BIT_CONTAINER   0x40000
+#define BIT_CONTAINER   0x40000 */
 
+typedef enum item_type {
+  itemtype_no_type,
+  itemtype_WEAPON,
+  itemtype_OFFHAND,
+  itemtype_RANGED,
+  itemtype_LIGHT,
+  itemtype_ARMOR,
+  itemtype_HELMET,
+  itemtype_CLOAK,
+  itemtype_GLOVES,
+  itemtype_BOOTS,
+  itemtype_AMULET,
+  itemtype_RING,
+  itemtype_SCROLL,
+  itemtype_BOOK,
+  itemtype_FLASK,
+  itemtype_GOLD,
+  itemtype_AMMUNITION,
+  itemtype_FOOD,
+  itemtype_WAND,
+  itemtype_CONTAINER
+} item_type_t;
+
+extern const char item_symbol[];
 
 int parseMonFile(std::fstream &f, dungeon *d);
 int parseObjFile(std::fstream & f, dungeon *d);

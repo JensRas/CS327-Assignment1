@@ -1,15 +1,16 @@
 #include "dice.h"
+#include <cstdlib>
 
 /*****************************************
  *              Dice Roller              *
  *****************************************/
-int rollDice(dice die)
+int32_t dice::rollDice(void) const
 {
     int i, roll = 0;
 
-    for (i = 0; i < (int)die.numDice; i++) {
-        roll += (rand() % die.sides) + 1;
+    for (i = 0; i < (int)numDice; i++) {
+        roll += (rand() % sides) + 1;
     }
-    roll += die.base;
+    roll += base;
     return roll; 
 }
