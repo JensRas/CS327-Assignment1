@@ -27,21 +27,21 @@ void gameRunner(dungeon *d) // This is the problem!!!
    
     for(y = 0; y < floorMaxY; y++){
         for(x = 0; x < floorMaxX; x++){
-            if(d->charMap[y][x].isPC && d->charMap[y][x].isAlive) {
-                d->charMap[y][x].hn = heap_insert(&h, &d->charMap[y][x]);
+            if(d->charMap[y][x]->isPC && d->charMap[y][x]->isAlive) {
+                d->charMap[y][x]->hn = heap_insert(&h, &d->charMap[y][x]);
             }
             else 
-                d->charMap[y][x].hn = NULL;
+                d->charMap[y][x]->hn = NULL;
         }
     }
 
     for(y = 0; y < floorMaxY; y++){
         for(x = 0; x < floorMaxX; x++){
-            if(d->charMap[y][x].isAlive && !d->charMap[y][x].isPC) {
-                d->charMap[y][x].hn = heap_insert(&h, &d->charMap[y][x]);
+            if(d->charMap[y][x]->isAlive && !d->charMap[y][x]->isPC) {
+                d->charMap[y][x]->hn = heap_insert(&h, &d->charMap[y][x]);
             }
             else 
-                d->charMap[y][x].hn = NULL;
+                d->charMap[y][x]->hn = NULL;
         }
     }
 
@@ -80,7 +80,7 @@ void gameRunner(dungeon *d) // This is the problem!!!
         for(i = 0; i < d->numRooms; i++){
             for(y = d->roomList[i].cornerY; y < d->roomList[i].sizeY; y++){
                 for(x = d->roomList[i].cornerX; x < d->roomList[i].sizeX; x++){
-                    if(d->charMap[y][x].isPC)
+                    if(d->charMap[y][x]->isPC)
                         pcRoom = i;
                 }
             }
@@ -502,13 +502,13 @@ void runGame(dungeon *d)
         //check for pc and monsters
         for(y = 0; y < floorMaxY; y++){
             for(x = 0; x < floorMaxX; x++){
-                if(d->charMap[y][x].isPC){
-                    if(!d->charMap[y][x].isAlive) {
+                if(d->charMap[y][x]->isPC){
+                    if(!d->charMap[y][x]->isAlive) {
                         loseGame();
                         return;
                     }
                 }
-                if(d->charMap[y][x].isAlive){
+                if(d->charMap[y][x]->isAlive){
                     entityCount++;
                 }
             }
@@ -569,11 +569,11 @@ void updateFog(dungeon *d)
         for(x = pc->x - fogVision / 2; x <= pc->x + fogVision / 2; x++){
             if(y < 0 || y > floorMaxY || x < 0 || x > floorMaxX)
                 continue;
-            if(d->charMap[y][x].isAlive && !d->charMap[y][x].isPC){
+            if(d->charMap[y][x]->isAlive && !d->charMap[y][x]->isPC){
                 char *s = (char*) malloc(1 * sizeof(char*));
-                sprintf(s, "%x", d->charMap[y][x].entity.nonPlayer.type);
+                sprintf(s, "%x", d->charMap[y][x]->entity.nonPlayer.type);
                 d->fogMap[y][x] = *s;
-            } else if(d->charMap[y][x].isPC) {
+            } else if(d->charMap[y][x]->isPC) {
                 d->fogMap[y][x] = playerChar;
             } else {
                 d->fogMap[y][x] = d->floor[y][x];

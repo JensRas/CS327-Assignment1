@@ -21,10 +21,18 @@ void printGame(dungeon *d, bool fog)
             if (fog) {
                 mvprintw(1 + y, x, "%c", d->fogMap[y][x]);
             } else {
-                if (d->charMap[y][x].isAlive && !d->charMap[y][x].isPC) {
-                    mvprintw(1 + y, x, "%x", d->charMap[y][x].entity.nonPlayer.type);
-                } else if (d->charMap[y][x].isPC && d->charMap[y][x].isAlive) {
+                if (d->charMap[y][x]->isAlive && !d->charMap[y][x]->isPC) {
+                    //attron(COLOR_PAIR(COLOR_X))
+                    mvprintw(1 + y, x, "%x", d->charMap[y][x]->entity.nonPlayer.type); // needs to print new symbols
+                    //attroff(COLOR_PAIR(COLOR_X))
+                } else if (d->charMap[y][x]->isPC && d->charMap[y][x]->isAlive) {
+                    //attron(COLOR_PAIR(COLOR_X))
                     mvprintw(1 + y, x, "%c", playerChar);
+                    //attroff(COLOR_PAIR(COLOR_X))
+                } else if (!d->itemMap[y][x]->name.empty()) {
+                    //attron(COLOR_PAIR(COLOR_X))
+                    mvprintw(1 + y, x, "%c", d->itemMap[y][x]->type); // needs to print from bitvector
+                    //attroff(COLOR_PAIR(COLOR_X))
                 } else {
                     mvprintw(1 + y, x, "%c", d->floor[y][x]);
                 }
@@ -58,7 +66,9 @@ void printMap(dungeon *d)
     }
     printf("\n");
 }
-
+/*****************************************
+ *           File Path Finder            *
+ *****************************************/
 std::string findFilePath(int x, std::string s)
 {   
     std::string home; 
@@ -249,4 +259,5 @@ void terminalInit()
     noecho();
     curs_set(0);
     keypad(stdscr, TRUE);
+    start_color();
 }

@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
         //printf("\n******************************OBJECTS******************************\n\n");
         //printObjDef(&d);
         f.close();
-        return 0;
+        //return 0;
     }
     if(argc >= 2){
         for(i = 1; i < argc; i++){

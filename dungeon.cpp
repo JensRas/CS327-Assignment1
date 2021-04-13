@@ -9,6 +9,7 @@
 #include "heap.h"
 #include "npc.h"
 #include "pc.h"
+#include "item.h"
 #include "pathfinder.h"
 #include "printers.h"
 #include "move.h"
@@ -216,6 +217,7 @@ void gameGen(dungeon *d)
     dijkstra(d, 0); // non tunneling
     dijkstra(d, 1); // tunneling
     monsterGen(d);
+    gen_items(d);
     fogGen(d);
     terminalInit();
     printGame(d, true);

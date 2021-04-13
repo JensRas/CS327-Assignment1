@@ -8,6 +8,8 @@
 #include "heap.h"
 #include "pc.h"
 #include "npc.h"
+#include "item.h"
+#include "dice.h"
 
 #define minRoomNumber       6
 #define maxRoomNumber      10
@@ -53,9 +55,10 @@
 #define containerChar      '%'
 #define stackChar          '&'
 
-
-//typedef struct pc pc;
-//typedef struct npc npc;
+typedef int16_t pair_t[2];
+class item;
+class monDesc1;
+class itemDesc;
 
 typedef struct room {
     int8_t cornerX;     // Top left corner
@@ -75,96 +78,53 @@ typedef struct corPath {
   int32_t cost;
 } corPath;
 
-class dice {
-    public:
-        uint32_t base = 0;
-        uint32_t sides;
-        uint32_t numDice;
-};
-
-class monDesc {
-    public:
-        std::string name;
-        std::string symbol;
-        uint8_t color = 0;
-        dice speed;
-        uint16_t ability = 0;
-        dice health;
-        dice damage;
-        std::string desc;
-        uint8_t rarity = 0;
-        npc *generateNpc();
-};
-
-class objDesc {
-    public:
-        std::string name;
-        std::string desc;
-        uint32_t type = 0;
-        uint8_t color = 0;
-        dice hit;
-        dice dam;
-        dice dodge;
-        dice def;
-        dice weight;
-        dice speed;
-        dice attr;
-        dice val;
-        std::string art;
-        uint8_t rarity = 0;
-};
-
 class character {
     public:
+        virtual ~character() {}
         heap_node_t *hn;
         int8_t x;
         int8_t y;
-        int8_t speed;
+        char symbol;
+        int32_t color;
+        int32_t speed;
         int nTurn;
         int8_t isPC;
-        int8_t isAlive;
-        int8_t sequenceNum;
+        int32_t isAlive;
+        int32_t hp;
+        const dice *dam;
+        const char *name;
+        int32_t sequenceNum;
         union Entity {
+            Entity();
+            ~Entity();
             pc player;
             npc nonPlayer;
         } entity;
+        inline char get_symbol() { return symbol; }
 };
-
-class item {
-    public: 
-        std::string name;
-        std::string desc;
-        uint32_t type = 0;
-        uint8_t color = 0;
-        int hit;
-        dice dam;
-        int dodge;
-        int def;
-        int weight;
-        int speed;
-        int attr;
-        int val;
-        std::string art;
-        uint8_t rarity = 0;
-}
 
 class dungeon {
     public:
+        dungeon() : floor{rockChar}, hardness{0}, nonTunDist{0}, 
+                    tunDist{0}, charMap{0}, monDesc(), objDesc(),
+                    numItems(0), numRooms(0), numMon(0) {}
+        ~dungeon();
         corPath path[floorMaxY][floorMaxX];
         char floor[floorMaxY][floorMaxX];
         char fogMap[floorMaxY][floorMaxX];
         uint8_t hardness[floorMaxY][floorMaxX];
         uint8_t nonTunDist[floorMaxY][floorMaxX];
         uint8_t tunDist[floorMaxY][floorMaxX];
-        character charMap[floorMaxY][floorMaxX];
-        item itemMap[floorMaxY][floorMaxX];
-        std::vector<monDesc> monDesc; 
-        std::vector<objDesc> objDesc;
+        character *charMap[floorMaxY][floorMaxX];
+        item *itemMap[floorMaxY][floorMaxX];
+        std::vector<monDesc1> monDesc;
+        std::vector<itemDesc> objDesc;
         std::string monVersion;
         std::string objVersion;
         room *roomList;
         stair *stairListU;
         stair *stairListD;
+        int16_t numItems;
         int16_t numRooms;
         int16_t numUStairs;
         int16_t numDStairs;

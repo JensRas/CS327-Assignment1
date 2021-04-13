@@ -25,7 +25,7 @@ int parseMonFile(std::fstream &f, dungeon *d)
     d->monVersion = str;
     // Checks for end of file
     while(!f.eof()) {
-        monDesc monster;
+        monDesc1 monster;
         fail = false;
 
         while(std::getline(f, str)){
@@ -169,7 +169,7 @@ int parseObjFile(std::fstream &f, dungeon *d)
     d->objVersion = str;
     // Checks for end of file
     while(!f.eof()) {
-        objDesc obj;
+        itemDesc obj;
         fail = false;
 
         while(std::getline(f, str)){
@@ -338,8 +338,11 @@ int parseObjFile(std::fstream &f, dungeon *d)
                 obj.val.numDice = stoi(str.substr(prePos, pos));
                 obj.val.sides = stoi(str.substr((pos + 1)));
             // Parses string and checks if empty
-            } else if (str.find("ART") != std::string::npos && obj.art.empty()) {
-                obj.art = str.substr(4);
+            } else if (str.find("ART") != std::string::npos && obj.art == false) {
+               if(str.substr(4) == "FALSE")
+                    obj.art = false;
+                else 
+                    obj.art = true;
             // Parses string and checks if empty then converts to int
             } else if (str.find("RRTY") != std::string::npos && obj.rarity == 0) {
                 obj.rarity = stoi(str.substr(5));
@@ -350,15 +353,4 @@ int parseObjFile(std::fstream &f, dungeon *d)
         }
     }
     return 0;
-}
-
-int rollDice(dice die)
-{
-    int i, roll = 0;
-
-    for (i = 0; i < (int)die.numDice; i++) {
-        roll += (rand() % die.sides) + 1;
-    }
-    roll += die.base;
-    return roll; 
 }

@@ -15,13 +15,13 @@ void playerGen(dungeon *d)
 
     for(y = 0; y < floorMaxY; y++){
         for(x = 0; x < floorMaxX; x++){
-            d->charMap[y][x].y = y;
-            d->charMap[y][x].x = x;
-            d->charMap[y][x].isPC = 0;
-            d->charMap[y][x].isAlive = 0;
-            d->charMap[y][x].speed = 0;
-            d->charMap[y][x].sequenceNum = 0;
-            d->charMap[y][x].nTurn = 0;
+            d->charMap[y][x]->y = y;
+            d->charMap[y][x]->x = x;
+            d->charMap[y][x]->isPC = 0;
+            d->charMap[y][x]->isAlive = 0;
+            d->charMap[y][x]->speed = 0;
+            d->charMap[y][x]->sequenceNum = 0;
+            d->charMap[y][x]->nTurn = 0;
         }
     }
 
@@ -31,12 +31,12 @@ void playerGen(dungeon *d)
         ranX = d->roomList[room].cornerX + (rand() % d->roomList[room].sizeX);
         
         if(d->floor[ranY][ranX] != upChar && d->floor[ranY][ranX] != downChar) {
-            d->charMap[ranY][ranX].y = ranY;
-            d->charMap[ranY][ranX].x = ranX;
-            d->charMap[ranY][ranX].isPC = 1;
-            d->charMap[ranY][ranX].isAlive = 1;
-            d->charMap[ranY][ranX].speed = 10;
-            d->charMap[ranY][ranX].sequenceNum = 0;
+            d->charMap[ranY][ranX]->y = ranY;
+            d->charMap[ranY][ranX]->x = ranX;
+            d->charMap[ranY][ranX]->isPC = 1;
+            d->charMap[ranY][ranX]->isAlive = 1;
+            d->charMap[ranY][ranX]->speed = 10;
+            d->charMap[ranY][ranX]->sequenceNum = 0;
             placed = true;
         }
     }
@@ -52,8 +52,8 @@ void movePC(dungeon *d, int yOff, int xOff)
 
     for(y = 0; y < floorMaxY; y++){
         for(x = 0; x < floorMaxX; x++){
-            if(d->charMap[y][x].isPC)
-                pc = &d->charMap[y][x];
+            if(d->charMap[y][x]->isPC)
+                pc = d->charMap[y][x];
         }
     }
     
@@ -65,15 +65,15 @@ void movePC(dungeon *d, int yOff, int xOff)
     oldX = pc->x;
     pc->y = tempY;
     pc->x = tempX;
-    d->charMap[tempY][tempX] = *pc;
-    d->charMap[oldY][oldX].y = oldY;
-    d->charMap[oldY][oldX].x = oldX;
-    d->charMap[oldY][oldX].speed = 0;
-    d->charMap[oldY][oldX].nTurn = 0;
-    d->charMap[oldY][oldX].isPC = 0;
-    d->charMap[oldY][oldX].isAlive = 0;
-    d->charMap[oldY][oldX].sequenceNum = 0;
-    d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
+    d->charMap[tempY][tempX] = pc;
+    d->charMap[oldY][oldX]->y = oldY;
+    d->charMap[oldY][oldX]->x = oldX;
+    d->charMap[oldY][oldX]->speed = 0;
+    d->charMap[oldY][oldX]->nTurn = 0;
+    d->charMap[oldY][oldX]->isPC = 0;
+    d->charMap[oldY][oldX]->isAlive = 0;
+    d->charMap[oldY][oldX]->sequenceNum = 0;
+    d->charMap[oldY][oldX]->entity.nonPlayer.type = 0;
 
     updateFog(d);
 }
@@ -88,8 +88,8 @@ void movePC(dungeon *d, int newY, int newX, bool override)
 
     for(y = 0; y < floorMaxY; y++){
         for(x = 0; x < floorMaxX; x++){
-            if(d->charMap[y][x].isPC)
-                pc = &d->charMap[y][x];
+            if(d->charMap[y][x]->isPC)
+                pc = d->charMap[y][x];
         }
     }
     
@@ -100,15 +100,15 @@ void movePC(dungeon *d, int newY, int newX, bool override)
     oldX = pc->x;
     pc->y = newY;
     pc->x = newX;
-    d->charMap[newY][newX] = *pc;
-    d->charMap[oldY][oldX].y = oldY;
-    d->charMap[oldY][oldX].x = oldX;
-    d->charMap[oldY][oldX].speed = 0;
-    d->charMap[oldY][oldX].nTurn = 0;
-    d->charMap[oldY][oldX].isPC = 0;
-    d->charMap[oldY][oldX].isAlive = 0;
-    d->charMap[oldY][oldX].sequenceNum = 0;
-    d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
+    d->charMap[newY][newX] = pc;
+    d->charMap[oldY][oldX]->y = oldY;
+    d->charMap[oldY][oldX]->x = oldX;
+    d->charMap[oldY][oldX]->speed = 0;
+    d->charMap[oldY][oldX]->nTurn = 0;
+    d->charMap[oldY][oldX]->isPC = 0;
+    d->charMap[oldY][oldX]->isAlive = 0;
+    d->charMap[oldY][oldX]->sequenceNum = 0;
+    d->charMap[oldY][oldX]->entity.nonPlayer.type = 0;
 }
 
 /*****************************************
@@ -119,8 +119,8 @@ character *findPC(dungeon *d)
     int x, y;
     for (y = 0; y < floorMaxY; y++) {
         for (x = 0; x < floorMaxX; x++) {
-            if (d->charMap[y][x].isPC) {
-                return &d->charMap[y][x];
+            if (d->charMap[y][x]->isPC) {
+                return d->charMap[y][x];
             }
         }
     }

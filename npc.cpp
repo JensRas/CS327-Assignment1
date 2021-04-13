@@ -36,17 +36,17 @@ void monsterGen(dungeon *d) {
             }
         }
 
-        d->charMap[ranY][ranX].x = ranX;
-        d->charMap[ranY][ranX].y = ranY;
-        d->charMap[ranY][ranX].entity.nonPlayer.type = rand() & 0xf;
-        d->charMap[ranY][ranX].isPC = 0;
-        d->charMap[ranY][ranX].isAlive = 1;
-        d->charMap[ranY][ranX].speed = (rand() % 16) + 5;
-        d->charMap[ranY][ranX].nTurn = 0;
-        d->charMap[ranY][ranX].sequenceNum = i + 1;
-        d->charMap[ranY][ranX].entity.nonPlayer.knownPCX = 0;
-        d->charMap[ranY][ranX].entity.nonPlayer.knownPCY = 0;
-        d->charMap[ranY][ranX].entity.nonPlayer.adj = nameMonst();
+        d->charMap[ranY][ranX]->x = ranX;
+        d->charMap[ranY][ranX]->y = ranY;
+        d->charMap[ranY][ranX]->entity.nonPlayer.type = rand() & 0xf;
+        d->charMap[ranY][ranX]->isPC = 0;
+        d->charMap[ranY][ranX]->isAlive = 1;
+        d->charMap[ranY][ranX]->speed = (rand() % 16) + 5;
+        d->charMap[ranY][ranX]->nTurn = 0;
+        d->charMap[ranY][ranX]->sequenceNum = i + 1;
+        d->charMap[ranY][ranX]->entity.nonPlayer.knownPCX = 0;
+        d->charMap[ranY][ranX]->entity.nonPlayer.knownPCY = 0;
+        d->charMap[ranY][ranX]->entity.nonPlayer.adj = nameMonst();
     }
 }
 /*****************************************
@@ -113,17 +113,20 @@ character *moveMonst(dungeon *d, int newY, int newX, character *npc)
     oldX = npc->x;
     npc->y = newY;
     npc->x = newX;
-    d->charMap[newY][newX] = *npc;
-    d->charMap[oldY][oldX].y = oldY;
-    d->charMap[oldY][oldX].x = oldX;
-    d->charMap[oldY][oldX].speed = 0;
-    d->charMap[oldY][oldX].isPC = 0;
-    d->charMap[oldY][oldX].nTurn = 0;
-    d->charMap[oldY][oldX].isAlive = 0;
-    d->charMap[oldY][oldX].sequenceNum = 0;
-    d->charMap[oldY][oldX].entity.nonPlayer.type = 0;
+    d->charMap[newY][newX] = npc;
+    d->charMap[oldY][oldX]->y = oldY;
+    d->charMap[oldY][oldX]->x = oldX;
+    d->charMap[oldY][oldX]->speed = 0;
+    d->charMap[oldY][oldX]->isPC = 0;
+    d->charMap[oldY][oldX]->nTurn = 0;
+    d->charMap[oldY][oldX]->isAlive = 0;
+    d->charMap[oldY][oldX]->sequenceNum = 0;
+    d->charMap[oldY][oldX]->entity.nonPlayer.type = 0;
     return npc;
 }
+
+
+
 /*****************************************
  *             Monster List              *
  *****************************************/
@@ -134,7 +137,7 @@ void makeMonstList(dungeon *d)
     int numAlive = 0;
     for(y = 0; y < floorMaxY; y++){
         for(x = 0; x < floorMaxX; x++){
-            if(d->charMap[y][x].isAlive && !d->charMap[y][x].isPC)
+            if(d->charMap[y][x]->isAlive && !d->charMap[y][x]->isPC)
                 numAlive++;
         }
     }
@@ -150,13 +153,13 @@ void makeMonstList(dungeon *d)
 
     for(y = 0; y < floorMaxY; y++){
         for(x = 0; x < floorMaxX; x++){
-            if(d->charMap[y][x].isAlive && !d->charMap[y][x].isPC){
-                yDiff = (pc->y - d->charMap[y][x].y > 0) ?  pc->y - d->charMap[y][x].y : d->charMap[y][x].y - pc->y;
-                xDiff = (pc->x - d->charMap[y][x].x > 0) ?  pc->x - d->charMap[y][x].x : d->charMap[y][x].x - pc->x;
-                nors = (pc->y - d->charMap[y][x].y > 0) ? (char*) "North" : (char*) "South";
-                eorw = (pc->x - d->charMap[y][x].x > 0) ? (char*) "West" : (char*) "East";
+            if(d->charMap[y][x]->isAlive && !d->charMap[y][x]->isPC){
+                yDiff = (pc->y - d->charMap[y][x]->y > 0) ?  pc->y - d->charMap[y][x]->y : d->charMap[y][x]->y - pc->y;
+                xDiff = (pc->x - d->charMap[y][x]->x > 0) ?  pc->x - d->charMap[y][x]->x : d->charMap[y][x]->x - pc->x;
+                nors = (pc->y - d->charMap[y][x]->y > 0) ? (char*) "North" : (char*) "South";
+                eorw = (pc->x - d->charMap[y][x]->x > 0) ? (char*) "West" : (char*) "East";
                 list[i] = (char*) malloc(15 + 2 + 2 + 5 + 4 + 11 + 1); //yDiff: 2, xDiff: 2, nors: 5, eorw: 4, spaces: 11, null term 1 
-                sprintf(list[i], "A %-11s %x: %2d %s by %2d %s", d->charMap[y][x].entity.nonPlayer.adj, d->charMap[y][x].entity.nonPlayer.type, yDiff, nors, xDiff, eorw);
+                sprintf(list[i], "A %-11s %x: %2d %s by %2d %s", d->charMap[y][x]->entity.nonPlayer.adj, d->charMap[y][x]->entity.nonPlayer.type, yDiff, nors, xDiff, eorw);
                 i++;
             } 
         }

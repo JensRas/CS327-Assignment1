@@ -1,9 +1,11 @@
 #ifndef PC_H
 #define PC_H
 
+#include "dungeon.h"
+
 typedef struct dungeon dungeon;
 typedef struct pc pc;
-typedef struct character character;
+class character;
 
 typedef struct pc {
 } pc;
