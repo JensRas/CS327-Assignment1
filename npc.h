@@ -48,14 +48,14 @@ class monster_description;
 typedef uint32_t npc_characteristics_t;
 
 class npc : public character {
- public:
-  npc(dungeon *d, monster_description &m);
-  ~npc();
-  npc_characteristics_t characteristics;
-  uint32_t have_seen_pc;
-  pair_t pc_last_known_position;
-  const char *description;
-  monster_description &md;
+    public:
+        npc(dungeon *d, monster_description &m);
+        ~npc();
+        npc_characteristics_t characteristics;
+        uint32_t have_seen_pc;
+        pair_t pc_last_known_position;
+        const char *description;
+        monster_description &md;
 };
 
 void gen_monsters(dungeon *d);

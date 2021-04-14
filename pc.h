@@ -3,15 +3,33 @@
 
 # include <stdint.h>
 
+# include "object.h"
 # include "dims.h"
 # include "character.h"
 # include "dungeon.h"
 
+#define weaponSlot      0
+#define offhandSlot     1
+#define rangedSlot      2
+#define armorSlot       3
+#define helmetSlot      4
+#define cloakSlot       5
+#define glovesSlot      6
+#define bootsSlot       7
+#define amuletSlot      8
+#define lightSlot       9
+#define ring1Slot      10
+#define ring2Slot      11
+
 class pc : public character {
- public:
-  ~pc() {}
-  terrain_type known_terrain[DUNGEON_Y][DUNGEON_X];
-  uint8_t visible[DUNGEON_Y][DUNGEON_X];
+    public:
+        ~pc() {}
+        terrain_type known_terrain[DUNGEON_Y][DUNGEON_X];
+        uint8_t visible[DUNGEON_Y][DUNGEON_X];
+        uint8_t carry_slots_held = 0;
+        object *carry_slots[10];
+        object *equipment_slots[12];
+        bool is_filled[12] = {0};
 };
 
 void pc_delete(pc *pc);

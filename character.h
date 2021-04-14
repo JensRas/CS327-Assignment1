@@ -9,35 +9,35 @@
 # include "utils.h"
 
 typedef enum kill_type {
-  kill_direct,
-  kill_avenged,
-  num_kill_types
+    kill_direct,
+    kill_avenged,
+    num_kill_types
 } kill_type_t;
 
 class dice;
 
 class character {
- public:
-  virtual ~character() {}
-  char symbol;
-  pair_t position;
-  int32_t speed;
-  uint32_t alive;
-  std::vector<uint32_t> color;
-  uint32_t hp;
-  const dice *damage;
-  const char *name;
-  /* Characters use to have a next_turn for the move queue.  Now that it is *
-   * an event queue, there's no need for that here.  Instead it's in the    *
-   * event.  Similarly, sequence_number was introduced in order to ensure   *
-   * that the queue remains stable.  Also no longer necessary here, but in  *
-   * this case, we'll keep it, because it provides a bit of interesting     *
-   * metadata: locally, how old is this character; and globally, how many   *
-   * characters have been created by the game.                              */
-  uint32_t sequence_number;
-  uint32_t kills[num_kill_types];
-  inline uint32_t get_color() { return color[rand_range(0, color.size() - 1)]; }
-  inline char get_symbol() { return symbol; }
+    public:
+        virtual ~character() {}
+        char symbol;
+        pair_t position;
+        int32_t speed;
+        uint32_t alive;
+        std::vector<uint32_t> color;
+        uint32_t hp;
+        const dice *damage;
+        const char *name;
+        /* Characters use to have a next_turn for the move queue.  Now that it is *
+        * an event queue, there's no need for that here.  Instead it's in the    *
+        * event.  Similarly, sequence_number was introduced in order to ensure   *
+        * that the queue remains stable.  Also no longer necessary here, but in  *
+        * this case, we'll keep it, because it provides a bit of interesting     *
+        * metadata: locally, how old is this character; and globally, how many   *
+        * characters have been created by the game.                              */
+        uint32_t sequence_number;
+        uint32_t kills[num_kill_types];
+        inline uint32_t get_color() { return color[rand_range(0, color.size() - 1)]; }
+        inline char get_symbol() { return symbol; }
 };
 
 class dungeon;
