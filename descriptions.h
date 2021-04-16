@@ -89,6 +89,10 @@ class monster_description {
         {
             num_alive--;
         }
+        inline uint32_t get_abilities()
+        {
+            return abilities;
+        }
         static npc *generate_monster(dungeon *d);
         friend npc;
 };

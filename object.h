@@ -33,6 +33,10 @@ class object {
         {
             return damage.get_sides();
         }
+        inline const char *get_description() 
+        {
+            return description.c_str();
+        }
         char get_symbol();
         uint32_t get_color();
         const char *get_name();

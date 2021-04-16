@@ -8,18 +8,18 @@
 # include "character.h"
 # include "dungeon.h"
 
-#define weaponSlot      0
-#define offhandSlot     1
-#define rangedSlot      2
-#define armorSlot       3
-#define helmetSlot      4
-#define cloakSlot       5
-#define glovesSlot      6
-#define bootsSlot       7
-#define amuletSlot      8
-#define lightSlot       9
-#define ring1Slot      10
-#define ring2Slot      11
+#define weapon_slot      0
+#define offhand_slot     1
+#define ranged_slot      2
+#define armor_slot       3
+#define helmet_slot      4
+#define cloak_slot       5
+#define gloves_slot      6
+#define boots_slot       7
+#define amulet_slot      8
+#define light_slot       9
+#define ring1_slot      10
+#define ring2_slot      11
 
 class pc : public character {
     public:
@@ -28,7 +28,8 @@ class pc : public character {
         uint8_t visible[DUNGEON_Y][DUNGEON_X];
         uint8_t carry_slots_held = 0;
         object *carry_slots[10];
-        object *equipment_slots[12];
+        object *equipment_slots[12] = {0};
+        //uint32_t hp = 5000;
         bool is_filled[12] = {0};
 };
 

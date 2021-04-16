@@ -875,14 +875,14 @@ static void io_list_carry_slots(dungeon *d)
     io_display(d);
 }
 
-static void io_list_equipment_slots_display(dungeon *d, uint32_t count)
+static void io_list_equipment_slots_display(dungeon *d)
 {
     uint32_t i;
-    char (*s)[60];
+    //char (*s)[60];
     char tmp[41];  /* 19 bytes for relative direction leaves 40 bytes *
                     * for the monster's name (and one for null).      */
 
-    s = (char (*)[60]) malloc((count + 1) * sizeof (*s));
+    //s = (char (*)[60]) malloc((count + 1) * sizeof (*s));
     
     mvprintw(3, 9, " %-60s ", "");
     mvprintw(4, 9, " %-60s", "Equipped Items");
@@ -890,10 +890,7 @@ static void io_list_equipment_slots_display(dungeon *d, uint32_t count)
 
     for (i = 0; i < 12; i++) {
         if (d->PC->is_filled[i]) { // Name slots ?
-            snprintf(tmp, 41, "%c %s -> %d+%dd%d", i + 97, d->PC->equipment_slots[i]->get_name(), 
-                                                     d->PC->equipment_slots[i]->get_damage_base(), 
-                                                     d->PC->equipment_slots[i]->get_damage_number(),
-                                                     d->PC->equipment_slots[i]->get_damage_sides());
+            snprintf(tmp, 41, "%c : %s", i + 97, d->PC->equipment_slots[i]->get_name());
         } else {
             snprintf(tmp, 41, "%c : Empty", i + 97);
         }
@@ -905,16 +902,556 @@ static void io_list_equipment_slots_display(dungeon *d, uint32_t count)
     mvprintw(12 + 7, 9, " %-60s ", "Hit escape to continue.");
     while (getch() != 27 /* escape */);
 
-    free(s);
+    //free(s);
 }
 
 static void io_list_equipment_slots(dungeon *d)
 {
     /* Display it */
-    io_list_equipment_slots_display(d, d->PC->carry_slots_held);
+    io_list_equipment_slots_display(d);
 
     /* And redraw the dungeon */
     io_display(d);
+}
+
+void io_pickup_object(dungeon *d)
+{
+    if(d->objmap[d->PC->position[dim_y]][d->PC->position[dim_x]]->get_symbol() == '&') {
+        //pickup top object
+        //io_display_pickup_menu(d);
+    } else {
+        d->PC->carry_slots[d->PC->carry_slots_held] = d->objmap[d->PC->position[dim_y]][d->PC->position[dim_x]];
+        d->objmap[d->PC->position[dim_y]][d->PC->position[dim_x]] = 0; //destroy obj
+        d->PC->carry_slots_held++;
+        mvprintw(0, 0, "You picked up %s!", d->PC->carry_slots[d->PC->carry_slots_held - 1]->get_name());
+    }
+}
+
+void io_reorder_carry_slot_arr(dungeon *d, int startIdx)
+{
+    int i;
+
+    for(i = startIdx; i < d->PC->carry_slots_held; i++){
+        d->PC->carry_slots[i] = d->PC->carry_slots[i + 1];
+    }
+}
+
+void io_equip_object(dungeon *d)
+{
+    object *tmp;
+    int key, key2;
+    int exit_key, ring_exit;
+
+    mvprintw(0, 0, "Select an item slot 0 - 9 to equip!");
+    
+    uint32_t i;
+    char (*s)[60];
+    char tmp2[41];  /* 19 bytes for relative direction leaves 40 bytes *
+                    * for the monster's name (and one for null).      */
+
+    s = (char (*)[60]) malloc((d->PC->carry_slots_held + 1) * sizeof (*s));
+    
+    mvprintw(3, 9, " %-60s ", "");
+    /* Borrow the first element of our array for this string: */
+    snprintf(s[0], 60, "You are carrying %d items:", d->PC->carry_slots_held);
+    mvprintw(4, 9, " %-60s", s);
+    mvprintw(5, 9, " %-60s ", "");
+
+    for (i = 0; i < 10; i++) {
+        if(i < d->PC->carry_slots_held){
+            snprintf(tmp2, 41, "%d : %s", i, d->PC->carry_slots[i]->get_name());
+        } else {
+            snprintf(tmp2, 41, "%d : %s", i, "Empty Slot");
+        }
+        mvprintw(i + 6, 12, " %-60s ", tmp2);
+    }
+
+    mvprintw(10 + 6, 9, " %-60s ", "");
+    mvprintw(10 + 7, 9, " %-60s ", "Hit escape to exit.");
+
+    do {
+        exit_key = 0;
+        switch(key = getch()) {
+            case '0' :
+            case '1' :
+            case '2' :
+            case '3' :
+            case '4' :
+            case '5' :
+            case '6' :
+            case '7' :
+            case '8' :
+            case '9' :
+                if (d->PC->equipment_slots[d->PC->carry_slots[key - 48]->get_type() - 1] &&  d->PC->carry_slots[key - 48]->get_type() != objtype_RING){
+                    tmp = d->PC->equipment_slots[d->PC->carry_slots[key - 48]->get_type() - 1];
+                    d->PC->equipment_slots[d->PC->carry_slots[key - 48]->get_type() - 1] = d->PC->carry_slots[key - 48];
+                    d->PC->carry_slots[key - 48] = tmp;
+                    io_queue_message("You swapped %s for %s!", d->PC->carry_slots[key - 48]->get_name(),
+                                                               d->PC->equipment_slots[d->PC->carry_slots[key - 48]->get_type() - 1]->get_name());
+                } else if (d->PC->carry_slots[key - 48]->get_type() == objtype_RING) { 
+                    if(!d->PC->equipment_slots[10]) {
+                        d->PC->equipment_slots[10] = d->PC->carry_slots[key - 48];
+                        d->PC->is_filled[10] = true;
+                        io_queue_message("You equipped %s!", d->PC->equipment_slots[10]->get_name());
+                        d->PC->carry_slots[key - 48] = 0;
+                        d->PC->carry_slots_held--;
+                        io_reorder_carry_slot_arr(d, key - 48);
+                    } else if(!d->PC->equipment_slots[11]){
+                        d->PC->equipment_slots[11] = d->PC->carry_slots[key - 48];
+                        d->PC->is_filled[11] = true;
+                        io_queue_message("You equipped %s!", d->PC->equipment_slots[11]->get_name());
+                        d->PC->carry_slots[key - 48] = 0;
+                        d->PC->carry_slots_held--;
+                        io_reorder_carry_slot_arr(d, key - 48);
+                    } else {
+                        mvprintw(0, 0, "Press 1 to swap ring 1, press 2 to swap ring 2");
+                        do {
+                            ring_exit = 0;
+                            switch(key2 = getch()) {
+                                case '1' :
+                                case '2' :
+                                    tmp = d->PC->equipment_slots[9 + key2 - 48];
+                                    d->PC->equipment_slots[9 + key2 - 48] = d->PC->carry_slots[key - 48];
+                                    d->PC->carry_slots[key - 48] = tmp;
+                                    break;
+                                default : 
+                                    mvprintw(0, 0, "Not a ring number %#o ", key2);
+                                    ring_exit = 1;
+                            }
+                        } while (ring_exit);
+                    }
+                } else {
+                    d->PC->equipment_slots[d->PC->carry_slots[key - 48]->get_type() - 1] = d->PC->carry_slots[key - 48];
+                    d->PC->is_filled[d->PC->carry_slots[key - 48]->get_type() - 1] = true;
+                    io_queue_message("You equipped %s!", d->PC->equipment_slots[d->PC->carry_slots[key - 48]->get_type() - 1]->get_name());
+                    d->PC->carry_slots[key - 48] = 0;
+                    d->PC->carry_slots_held--;
+                    io_reorder_carry_slot_arr(d, key - 48);
+                }
+                break;
+            case 27 : 
+                break;
+            default : 
+                mvprintw(0, 0, "Not an item slot %#o ", key);
+                exit_key = 1;
+        }
+    } while (exit_key);
+}
+
+void io_equip_menu(dungeon *d)
+{
+    io_equip_object(d);
+    io_display(d);
+}
+
+void io_unequip_object(dungeon *d)
+{
+    // inv is 0-9 equip is a-l
+    int exit_key, key;
+    mvprintw(0, 0, "Select an item slot a - l to unequip!");
+    
+    uint32_t i;
+    char tmp[41];  /* 19 bytes for relative direction leaves 40 bytes *
+                    * for the monster's name (and one for null).      */
+    
+    mvprintw(3, 9, " %-60s ", "");
+    mvprintw(4, 9, " %-60s", "Equipped Items");
+    mvprintw(5, 9, " %-60s ", "");
+
+    for (i = 0; i < 12; i++) {
+        if (d->PC->is_filled[i]) { // Name slots ?
+            snprintf(tmp, 41, "%c : %s", i + 97, d->PC->equipment_slots[i]->get_name());
+        } else {
+            snprintf(tmp, 41, "%c : Empty", i + 97);
+        }
+        
+        mvprintw(i + 6, 12, " %-60s ", tmp);
+    }
+
+    mvprintw(12 + 6, 9, " %-60s ", "");
+    mvprintw(12 + 7, 9, " %-60s ", "Hit escape to exit.");
+
+    do {
+        exit_key = 0;
+        switch(key = getch()) {
+            case 'a' :
+            case 'b' :
+            case 'c' :
+            case 'd' :
+            case 'e' :
+            case 'f' :
+            case 'g' :
+            case 'h' :
+            case 'i' :
+            case 'j' :
+            case 'k' :
+            case 'l' :
+                if(d->PC->equipment_slots[key - 97] == 0){
+                    mvprintw(0, 0, "No item equipt in that slot!");
+                } else {
+                    d->PC->carry_slots[d->PC->carry_slots_held] = d->PC->equipment_slots[key - 97];
+                    d->PC->is_filled[key - 97] = false;
+                    d->PC->carry_slots_held++;
+                    d->PC->equipment_slots[key - 97] = 0;
+                }
+                break;
+            default : 
+                mvprintw(0, 0, "Not an equiptment slot %#o " , key);
+                exit_key = 1;
+        }
+    } while (exit_key);
+    
+}
+
+void io_unequip_menu(dungeon *d)
+{
+    io_unequip_object(d);
+    io_display(d);
+}
+
+void io_drop_object(dungeon *d)
+{
+    int key;
+    int exit_key;
+
+    mvprintw(0, 0, "Select an item slot 0 - 9 to drop!");
+    
+    uint32_t i;
+    char (*s)[60];
+    char tmp[41];  /* 19 bytes for relative direction leaves 40 bytes *
+                    * for the monster's name (and one for null).      */
+
+    s = (char (*)[60]) malloc((d->PC->carry_slots_held + 1) * sizeof (*s));
+    
+    mvprintw(3, 9, " %-60s ", "");
+    /* Borrow the first element of our array for this string: */
+    snprintf(s[0], 60, "You are carrying %d items:", d->PC->carry_slots_held);
+    mvprintw(4, 9, " %-60s", s);
+    mvprintw(5, 9, " %-60s ", "");
+
+    for (i = 0; i < 10; i++) {
+        if(i < d->PC->carry_slots_held){
+            snprintf(tmp, 41, "%d : %s", i, d->PC->carry_slots[i]->get_name());
+        } else {
+            snprintf(tmp, 41, "%d : %s", i, "Empty Slot");
+        }
+        mvprintw(i + 6, 12, " %-60s ", tmp);
+    }
+
+    mvprintw(10 + 6, 9, " %-60s ", "");
+    mvprintw(10 + 7, 9, " %-60s ", "Hit escape to exit.");
+
+    do {
+        exit_key = 0;
+        switch(key = getch()) {
+            case '0' :
+            case '1' :
+            case '2' :
+            case '3' :
+            case '4' :
+            case '5' :
+            case '6' :
+            case '7' :
+            case '8' :
+            case '9' :
+                d->objmap[d->PC->position[dim_y]][d->PC->position[dim_x]] = d->PC->carry_slots[key - 48];
+                d->PC->carry_slots[key - 48] = 0;
+                d->PC->carry_slots_held--;
+                io_reorder_carry_slot_arr(d, key - 48);
+                break;
+            default : 
+                mvprintw(0, 0, "Not an equiptment slot %#o " , key);
+                exit_key = 1;
+        }
+    } while (exit_key);
+                
+}
+
+void io_drop_object_menu(dungeon *d)
+{
+    io_drop_object(d);
+    io_display(d);
+}
+
+void io_destroy_object(dungeon *d)
+{
+    // inv is 0-9 equip is a-l
+    int exit_key, key;
+    mvprintw(0, 0, "Select an item slot 0 - 9 to destroy!");
+    
+    uint32_t i;
+    char (*s)[60];
+    char tmp[41];  /* 19 bytes for relative direction leaves 40 bytes *
+                    * for the monster's name (and one for null).      */
+
+    s = (char (*)[60]) malloc((d->PC->carry_slots_held + 1) * sizeof (*s));
+    
+    mvprintw(3, 9, " %-60s ", "");
+    /* Borrow the first element of our array for this string: */
+    snprintf(s[0], 60, "You are carrying %d items:", d->PC->carry_slots_held);
+    mvprintw(4, 9, " %-60s", s);
+    mvprintw(5, 9, " %-60s ", "");
+
+    for (i = 0; i < 10; i++) {
+        if(i < d->PC->carry_slots_held){
+            snprintf(tmp, 41, "%d : %s", i, d->PC->carry_slots[i]->get_name());
+        } else {
+            snprintf(tmp, 41, "%d : %s", i, "Empty Slot");
+        }
+        mvprintw(i + 6, 12, " %-60s ", tmp);
+    }
+
+    mvprintw(10 + 6, 9, " %-60s ", "");
+    mvprintw(10 + 7, 9, " %-60s ", "Hit escape to exit.");
+
+    do {
+        exit_key = 0;
+        switch(key = getch()) {
+            case '0' :
+            case '1' :
+            case '2' :
+            case '3' :
+            case '4' :
+            case '5' :
+            case '6' :
+            case '7' :
+            case '8' :
+            case '9' :
+                if(d->PC->carry_slots[key - 48] == 0){
+                    mvprintw(0, 0, "No item in that slot!");
+                } else {
+                    //d->PC->carry_slots[d->PC->carry_slots_held] = d->PC->carry_slots[key - 48];
+                    delete d->PC->carry_slots[key - 48];
+                    d->PC->carry_slots[key - 48] = 0;
+                    d->PC->carry_slots_held--; 
+                    io_reorder_carry_slot_arr(d, key - 48);
+                }
+                break;
+            default : 
+                mvprintw(0, 0, "Not a carry slot %#o " , key);
+                exit_key = 1;
+        }
+    } while (exit_key);
+}
+
+void io_destroy_menu(dungeon *d)
+{
+    io_destroy_object(d);
+    io_display(d);
+}
+
+void io_inspect_object(dungeon *d)
+{
+    int exit_key, key;
+    mvprintw(0, 0, "Select an item slot 0 - 9 to inspect!");
+    
+    uint32_t i;
+    char (*s)[60];
+    char tmp[41];  /* 19 bytes for relative direction leaves 40 bytes *
+                    * for the monster's name (and one for null).      */
+
+    s = (char (*)[60]) malloc((d->PC->carry_slots_held + 1) * sizeof (*s));
+    
+    mvprintw(3, 9, " %-60s ", "");
+    /* Borrow the first element of our array for this string: */
+    snprintf(s[0], 60, "You are carrying %d items:", d->PC->carry_slots_held);
+    mvprintw(4, 9, " %-60s", s);
+    mvprintw(5, 9, " %-60s ", "");
+
+    for (i = 0; i < 10; i++) {
+        if(i < d->PC->carry_slots_held){
+            snprintf(tmp, 41, "%d : %s", i, d->PC->carry_slots[i]->get_name());
+        } else {
+            snprintf(tmp, 41, "%d : %s", i, "Empty Slot");
+        }
+        mvprintw(i + 6, 12, " %-60s ", tmp);
+    }
+
+    mvprintw(10 + 6, 9, " %-60s ", "");
+    mvprintw(10 + 7, 9, " %-60s ", "Hit escape to exit.");
+
+    do {
+        exit_key = 0;
+        switch(key = getch()) {
+            case '0' :
+            case '1' :
+            case '2' :
+            case '3' :
+            case '4' :
+            case '5' :
+            case '6' :
+            case '7' :
+            case '8' :
+            case '9' :
+                if(d->PC->carry_slots[key - 48] == 0){
+                    mvprintw(0, 0, "No item in that slot!");
+                } else {
+                    //wclear();
+                    mvprintw(3, 9, " %-60s ", "");
+                    mvprintw(4, 9, "Item -> %s", d->PC->carry_slots[key - 48]->get_name());
+                    mvprintw(5, 9, " %-60s ", "");
+                    mvprintw(6, 9, "%s", d->PC->carry_slots[key - 48]->get_description());
+                }
+                while (getch() != 27);
+                break;
+            default : 
+                mvprintw(0, 0, "Not a carry slot %#o " , key);
+                exit_key = 1;
+        }
+    } while (exit_key);
+}
+
+void io_inspect_menu(dungeon *d)
+{
+    io_inspect_object(d);
+    io_display(d);
+}
+
+uint32_t io_look_at_monster(dungeon *d)
+{
+    pair_t dest;
+    int c;
+    fd_set readfs;
+    struct timeval tv;
+
+    pc_reset_visibility(d->PC);
+    io_display_no_fog(d);
+
+    mvprintw(0, 0, "Choose a monster to look at");
+
+    dest[dim_y] = d->PC->position[dim_y];
+    dest[dim_x] = d->PC->position[dim_x];
+
+    mvaddch(dest[dim_y] + 1, dest[dim_x], '*');
+    refresh();
+
+    do {
+        do{
+            FD_ZERO(&readfs);
+            FD_SET(STDIN_FILENO, &readfs);
+
+            tv.tv_sec = 0;
+            tv.tv_usec = 125000; /* An eigth of a second */
+
+            io_redisplay_non_terrain(d, dest);
+        } while (!select(STDIN_FILENO + 1, &readfs, NULL, NULL, &tv));
+
+        /* Can simply draw the terrain when we move the cursor away, *
+        * because if it is a character or object, the refresh       *
+        * function will fix it for us.                              */
+        switch (mappair(dest)) {
+            case ter_wall:
+            case ter_wall_immutable:
+            case ter_unknown:
+                mvaddch(dest[dim_y] + 1, dest[dim_x], ' ');
+                break;
+            case ter_floor:
+            case ter_floor_room:
+                mvaddch(dest[dim_y] + 1, dest[dim_x], '.');
+                break;
+            case ter_floor_hall:
+                mvaddch(dest[dim_y] + 1, dest[dim_x], '#');
+                break;
+            case ter_debug:
+                mvaddch(dest[dim_y] + 1, dest[dim_x], '*');
+                break;
+            case ter_stairs_up:
+                mvaddch(dest[dim_y] + 1, dest[dim_x], '<');
+                break;
+            case ter_stairs_down:
+                mvaddch(dest[dim_y] + 1, dest[dim_x], '>');
+                break;
+            default:
+                /* Use zero as an error symbol, since it stands out somewhat, and it's *
+                * not otherwise used.                                                 */
+                mvaddch(dest[dim_y] + 1, dest[dim_x], '0');
+        }
+        switch ((c = getch())) {
+            case '7':
+            case 'y':
+            case KEY_HOME:
+                if (dest[dim_y] != 1) {
+                    dest[dim_y]--;
+                }
+                if (dest[dim_x] != 1) {
+                    dest[dim_x]--;
+                }
+                break;
+            case '8':
+            case 'k':
+            case KEY_UP:
+                if (dest[dim_y] != 1) {
+                    dest[dim_y]--;
+                }
+                break;
+            case '9':
+            case 'u':
+            case KEY_PPAGE:
+                if (dest[dim_y] != 1) {
+                    dest[dim_y]--;
+                }
+                if (dest[dim_x] != DUNGEON_X - 2) {
+                    dest[dim_x]++;
+                }
+                break;
+            case '6':
+            case 'l':
+            case KEY_RIGHT:
+                if (dest[dim_x] != DUNGEON_X - 2) {
+                    dest[dim_x]++;
+                }
+                break;
+            case '3':
+            case 'n':
+            case KEY_NPAGE:
+                if (dest[dim_y] != DUNGEON_Y - 2) {
+                    dest[dim_y]++;
+                }
+                if (dest[dim_x] != DUNGEON_X - 2) {
+                    dest[dim_x]++;
+                }
+                break;
+            case '2':
+            case 'j':
+            case KEY_DOWN:
+                if (dest[dim_y] != DUNGEON_Y - 2) {
+                    dest[dim_y]++;
+                }
+                break;
+            case '1':
+            case 'b':
+            case KEY_END:
+                if (dest[dim_y] != DUNGEON_Y - 2) {
+                    dest[dim_y]++;
+                }
+                if (dest[dim_x] != 1) {
+                    dest[dim_x]--;
+                }
+                break;
+            case '4':
+            case 'h':
+            case KEY_LEFT:
+                if (dest[dim_x] != 1) {
+                    dest[dim_x]--;
+                }
+                break;
+            }
+    } while (c != 't' && c != 27);
+
+    if (!charpair(dest) || charpair(dest) == d->PC) {
+        io_queue_message("No monster at selected location");
+    } else {
+        mvprintw(4, 9, "Monster -> %s", d->character_map[dest[dim_y]][dest[dim_x]]->name);
+        npc *n = (npc*)d->character_map[dest[dim_y]][dest[dim_x]];
+        mvprintw(6, 9, "%s", n->description);
+        while (getch() != 27);
+    }
+
+    pc_observe_terrain(d->PC, d);
+
+    io_display(d);
+
+    return 0;
 }
 
 void io_handle_input(dungeon *d)
@@ -997,16 +1534,37 @@ void io_handle_input(dungeon *d)
                 fail_code = move_pc(d, '<');
             break;
             case 'w':
-                
+                if(!d->PC->carry_slots_held)
+                    mvprintw(0, 0, "You have nothing to wear!");
+                else {
+                    io_equip_menu(d);                  
+                }
+                fail_code = 1;
                 break;
             case 't':
-
+                if(d->PC->carry_slots_held >= 10){
+                    mvprintw(0, 0, "You have no space to hold that!");
+                } else {
+                    io_unequip_menu(d);
+                }
+                fail_code = 1;
                 break;
             case 'd':
-            
+                if(d->PC->carry_slots_held <= 0){
+                    mvprintw(0, 0, "You have nothing to drop!");
+                } else {
+                    io_drop_object_menu(d);
+                }
+                fail_code = 1;
+                break;
                 break;
             case 'x':
-            
+                if(d->PC->carry_slots_held <= 0){
+                        mvprintw(0, 0, "You have nothing to expunge!");
+                    } else {
+                        io_destroy_menu(d);
+                    }
+                    fail_code = 1;
                 break;
             case 'i':
                 io_list_carry_slots(d);
@@ -1017,12 +1575,27 @@ void io_handle_input(dungeon *d)
                 fail_code = 1;
                 break;
             case ',':
-                
+                if(d->objmap[d->PC->position[dim_y]][d->PC->position[dim_x]] <= 0) {
+                    mvprintw(0, 0, "There's no item there to pickup!");
+                }
+                else if(d->PC->carry_slots_held < 10){
+                    io_pickup_object(d);
+                } else {
+                    mvprintw(0, 0, "You don't have any room to carry that!");
+                }
+                fail_code = 1;
                 break;
             case 'I':
-            
+                if(d->PC->carry_slots_held <= 0){
+                        mvprintw(0, 0, "You have nothing to inspect!");
+                    } else {
+                        io_inspect_menu(d);
+                    }
+                    fail_code = 1;
+                break;
                 break;
             case 'L':
+                io_look_at_monster(d);
                 fail_code = 1;
                 break;
             case 'Q':
